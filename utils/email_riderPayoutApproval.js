@@ -15,13 +15,13 @@ async function sendRiderPayoutApprovalEmail(email) {
   const mailOptions = {
     from: process.env.AUTH_USER,
     to: email,
-    subject: "SprinFare - Payout Request Approved",
+    subject: "Sprin - Payout Request Approved",
     text: `Dear Rider Partner,\n\n
     We are pleased to inform you that your recent payout request has been successfully approved. The requested amount will be credited to your bank account within the next few hours.\n\n
     If you have any questions or concerns, please feel free to reach out to our support team at any time.\n\n
-    Thank you for partnering with SprinFare!\n\n
+    Thank you for partnering with Sprin!\n\n
     Best regards,\n
-    SprinFare Finance Team`,
+    Sprin Finance Team`,
   };
 
   // Sending email

@@ -45,8 +45,8 @@ exports.mailTransporterObj = {
   },
 };
 
-exports.mailSource = '"SprinFare" <christophergodstime45@gmail.com>';
-exports.sourceMail = "christophergodstime45@gmail.com";
+exports.mailSource = '"Sprin" <sprinapp@gmail.com>';
+exports.sourceMail = "sprinapp@gmail.com";
 
 exports.capitalizeFirstLetter = (arg) => {
   const firstLetter = arg.charAt(0).toUpperCase();

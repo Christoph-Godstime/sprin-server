@@ -15,15 +15,15 @@ async function sendBankDetailsEmail(email, otp) {
   const mailOptions = {
     from: process.env.AUTH_USER,
     to: email,
-    subject: "SprinFare - Bank Details Verification OTP",
+    subject: "Sprin - Bank Details Verification OTP",
     text: `Dear User,\n\n
     To ensure the security of your account, we require verification before updating your bank details.\n\n
     Please use the following One-Time Password (OTP) to confirm your request:\n\n
     OTP: ${otp}\n\n
     If you did not initiate this request, please disregard this email.\n\n
-    Thank you for using SprinFare!\n
+    Thank you for using Sprin!\n
     Best regards,\n
-    SprinFare Support Team`,
+    Sprin Support Team`,
   };
 
   // Sending email

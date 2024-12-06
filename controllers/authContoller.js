@@ -15,11 +15,11 @@ const {
   decapitalize,
 } = require("../utils/helper");
 
-const twilio = require("twilio");
-const client = twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-);
+// const twilio = require("twilio");
+// const client = twilio(
+//   process.env.TWILIO_ACCOUNT_SID,
+//   process.env.TWILIO_AUTH_TOKEN
+// );
 
 const generateReferralCode = async () => {
   let referralCode;
@@ -106,14 +106,13 @@ module.exports = {
       sendVerificationEmail(newUser.email, otp);
 
       // Send phone verification OTP using Twilio Verify API
-      await client.verify.v2
-        .services(process.env.TWILIO_VERIFY_SERVICE_SID)
-        .verifications.create({ to: phone, channel: "sms", ttl: 600 });
+      // await client.verify.v2
+      //   .services(process.env.TWILIO_VERIFY_SERVICE_SID)
+      //   .verifications.create({ to: phone, channel: "sms", ttl: 600 });
 
       return res.status(201).json({
         status: true,
-        message:
-          "Sign up successful. OTPs sent for email and phone number verification.",
+        message: "Sign up successful. OTP sent for email verification.",
       });
     } catch (error) {
       return res.status(500).json({ status: false, message: error.message });

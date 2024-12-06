@@ -2,16 +2,35 @@ const Category = require("../models/Category");
 
 module.exports = {
   createCategory: async (req, res) => {
-    const newCategory = new Category(req.body);
+    const { title, value, imageUrl } = req.body;
+
     try {
+      // Check if a category with the same title or value already exists
+      const existingCategory = await Category.findOne({
+        $or: [{ title }, { value }],
+      });
+
+      if (existingCategory) {
+        return res.status(400).json({
+          status: false,
+          message: "Category with the same title or value already exists",
+        });
+      }
+
+      // Proceed with creating a new category if no conflict exists
+      const newCategory = new Category({ title, value, imageUrl });
       await newCategory.save();
 
-      res
-        .status(201)
-        .json({ status: true, message: "Category successfully created" });
+      res.status(201).json({
+        status: true,
+        message: "Category successfully created",
+      });
     } catch (error) {
       console.error("Error creating category:", error);
-      throw error;
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while creating the category",
+      });
     }
   },
 
@@ -41,12 +60,10 @@ module.exports = {
         .json({ status: true, message: "Category successfully updated" });
     } catch (error) {
       console.error("Error updating category:", error);
-      res
-        .status(500)
-        .json({
-          status: false,
-          message: "An error occurred while updating the category.",
-        });
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while updating the category.",
+      });
     }
   },
 
@@ -54,12 +71,10 @@ module.exports = {
     const id = req.params;
 
     if (!id) {
-      return res
-        .status(400)
-        .json({
-          status: false,
-          message: "Category ID is required for deletion.",
-        });
+      return res.status(400).json({
+        status: false,
+        message: "Category ID is required for deletion.",
+      });
     }
 
     try {
@@ -70,12 +85,10 @@ module.exports = {
         .json({ status: true, message: "Category successfully deleted" });
     } catch (error) {
       console.error("Error deleting category:", error);
-      res
-        .status(500)
-        .json({
-          status: false,
-          message: "An error occurred while deleting the category.",
-        });
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while deleting the category.",
+      });
     }
   },
 
@@ -88,12 +101,10 @@ module.exports = {
       res.status(200).json(categories);
     } catch (error) {
       console.error("Error fetching categories:", error);
-      res
-        .status(500)
-        .json({
-          status: false,
-          message: "An error occurred while fetching the categories.",
-        });
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while fetching the categories.",
+      });
     }
   },
 
@@ -112,21 +123,17 @@ module.exports = {
 
       await updatedCategory.save();
 
-      res
-        .status(200)
-        .json({
-          status: true,
-          message: "Category image successfully patched",
-          data: updatedCategory,
-        });
+      res.status(200).json({
+        status: true,
+        message: "Category image successfully patched",
+        data: updatedCategory,
+      });
     } catch (error) {
       console.error("Error patching category image:", error);
-      res
-        .status(500)
-        .json({
-          status: false,
-          message: "An error occurred while patching the category image.",
-        });
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while patching the category image.",
+      });
     }
   },
 
@@ -148,12 +155,10 @@ module.exports = {
       res.status(200).json(categories);
     } catch (error) {
       console.error("Error fetching limited categories:", error);
-      res
-        .status(500)
-        .json({
-          status: false,
-          message: "An error occurred while fetching the categories.",
-        });
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while fetching the categories.",
+      });
     }
   },
 };

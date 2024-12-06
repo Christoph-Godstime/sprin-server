@@ -15,7 +15,7 @@ async function sendResetPasswordEmail(email, otp) {
   const mailOptions = {
     from: process.env.AUTH_USER,
     to: email,
-    subject: "SprinFare Password Reset OTP",
+    subject: "Sprin Password Reset OTP",
     text: `You are receiving this email because you (or someone else) have requested the reset of a password.\n\n
     Please use the following OTP to complete the process:\n\n
     OTP: ${otp}\n\n

@@ -15,8 +15,8 @@ async function sendVerificationEmail(userEmail, verificationCode) {
   const mailOptions = {
     from: process.env.AUTH_USER,
     to: userEmail,
-    subject: "SprinFare Verification Code",
-    html: `<h1>SprinFare Email Verification</h1>
+    subject: "Sprin Verification Code",
+    html: `<h1>Sprin Email Verification</h1>
                <p>Your verification code is:</p>
                <h2 style="color: blue;">${verificationCode}</h2>
                <p>Please enter this code on the verification page to complete your registration process.</p>

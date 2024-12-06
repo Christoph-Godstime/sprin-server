@@ -157,7 +157,7 @@ app.use("/api/rider-bank-details", riderBankDetails);
 app.use("/api/rider", rider);
 
 http.listen(process.env.PORT || 6000, () =>
-  console.log(`SprinFare backend app listening on port ${process.env.PORT}!`)
+  console.log(`Sprin backend app listening on port ${process.env.PORT}!`)
 );
 
 // After server and socket.io are initialized, pass io and userSocketMap to the cron jobs
