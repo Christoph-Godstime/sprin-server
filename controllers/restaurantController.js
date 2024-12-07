@@ -3,6 +3,7 @@ const User = require("../models/User");
 const VendorApplication = require("../models/VendorApplication");
 const sendPushNotification = require("../utils/sendPushNotification");
 const { getAdminPushTokens } = require("../utils/adminPushTokens");
+const mongoose = require("mongoose");
 
 const adminPushTokens = [
   "ExponentPushToken[bqYCioJmXpKlXskTpN6PEI]",
@@ -12,7 +13,15 @@ const adminPushTokens = [
 module.exports = {
   addRestaurant: async (req, res) => {
     console.log(req.body);
-    const owner = mongoose.Types.ObjectId(req.user.id);
+    let owner;
+    try {
+      owner = new mongoose.Types.ObjectId(req.user.id);
+    } catch (error) {
+      return res.status(400).json({
+        status: false,
+        message: "Invalid user ID format",
+      });
+    }
 
     const existingRestaurant = await Restaurant.findOne({ owner: owner });
     if (existingRestaurant) {
