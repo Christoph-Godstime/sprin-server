@@ -13,6 +13,7 @@ router.post(
 
 router.post(
   "/payout/approve/:payoutRequestId",
+  verifyAdmin,
   paymentController.approvePayout
 );
 

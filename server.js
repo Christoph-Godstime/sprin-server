@@ -27,6 +27,7 @@ app.use((req, res, next) => {
   next();
 });
 
+const adminRoute = require("./routes/admin");
 const authRoute = require("./routes/auth");
 const userRoute = require("./routes/user");
 const restRoute = require("./routes/restaurant");
@@ -133,6 +134,7 @@ dataBaseConnection();
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use("/api/admin", adminRoute);
 app.use("/", authRoute);
 app.use("/api/users", userRoute);
 app.use("/api/restaurant", restRoute);

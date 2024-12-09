@@ -3,6 +3,7 @@ const riderPaymentController = require("../controllers/riderPaymentController");
 const {
   verifyTokenAndAuthorization,
   verifyRider,
+  verifyAdmin,
 } = require("../middlewares/verifyToken");
 
 router.post(
@@ -14,6 +15,7 @@ router.post(
 
 router.post(
   "/payout/approve/:payoutRequestId",
+  verifyAdmin,
   riderPaymentController.approvePayout
 );
 
