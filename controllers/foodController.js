@@ -416,12 +416,31 @@ module.exports = {
         {
           $search: {
             index: "foods",
-            text: {
-              query: search,
-              path: ["title", "restaurantName", "description"], // Fields to search
-              fuzzy: {
-                maxEdits: 1, // Allows for typo tolerance
-              },
+            compound: {
+              should: [
+                {
+                  text: {
+                    query: search,
+                    path: ["title", "restaurantName", "description"], // Fields to search
+                    fuzzy: {
+                      maxEdits: 1, // Allows for typo tolerance
+                    },
+                  },
+                },
+                {
+                  autocomplete: {
+                    query: search,
+                    path: ["title", "restaurantName", "description"], // Fields to autocomplete
+                    tokenOrder: "sequential",
+                  },
+                },
+                {
+                  phrase: {
+                    query: search,
+                    path: ["title", "restaurantName", "description"], // Fields to search phrases
+                  },
+                },
+              ],
             },
           },
         },
@@ -435,7 +454,7 @@ module.exports = {
           $sort: { random: 1 }, // Sort by the random number to shuffle
         },
         {
-          $limit: 50, // Limit to 30 documents
+          $limit: 50, // Limit to 50 documents
         },
         {
           $project: { random: 0 }, // Remove the random field from the output
