@@ -392,7 +392,7 @@ module.exports = {
       if (adminPushTokens.length > 0) {
         await sendPushNotification(
           adminPushTokens,
-          "New customer support message",
+          "Admin Notification - Customer Support Message",
           `A new customer support message has been submitted by ${firstName} ${lastName}.`
         );
       }

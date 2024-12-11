@@ -9,6 +9,7 @@ const RiderPayment = require("../models/RiderPayment");
 const axios = require("axios");
 const mongoose = require("mongoose");
 const sendPushNotification = require("../utils/sendPushNotification");
+const { getAdminPushTokens } = require("../utils/adminPushTokens");
 
 const generateSecretCode = () => {
   return Math.floor(1000 + Math.random() * 9000).toString();
@@ -223,7 +224,7 @@ module.exports = {
             select: "title imageUrl logoUrl time",
             populate: {
               path: "owner",
-              select: "expoPushToken firstName lastName",
+              select: "expoPushToken firstName lastName phone",
             },
           })
           .populate({
@@ -257,6 +258,29 @@ module.exports = {
           );
         } else {
           console.error("Restaurant owner's expoPushToken not found.");
+        }
+
+        let adminPushTokens = [];
+        try {
+          adminPushTokens = (await getAdminPushTokens()) || [];
+        } catch (error) {
+          console.error("Error fetching admin push tokens:", error.message);
+        }
+
+        if (adminPushTokens.length > 0) {
+          try {
+            await sendPushNotification(
+              adminPushTokens,
+              "Admin Notification - New Restaurant Order",
+              `A new order for ${updatedOrder.restaurantId.title} at ${updatedOrder.orderDate} | ${updatedOrder.restaurantId.owner?.phone}.`
+            );
+            console.log("Admin notification sent successfully.");
+          } catch (notificationError) {
+            console.error(
+              "Error sending admin notification:",
+              notificationError.message
+            );
+          }
         }
 
         res
@@ -311,7 +335,7 @@ module.exports = {
           select: "title imageUrl logoUrl time",
           populate: {
             path: "owner",
-            select: "expoPushToken firstName lastName",
+            select: "expoPushToken firstName lastName phone",
           },
         })
         .populate({
@@ -345,6 +369,29 @@ module.exports = {
         );
       } else {
         console.error("Restaurant owner's expoPushToken not found.");
+      }
+
+      let adminPushTokens = [];
+      try {
+        adminPushTokens = (await getAdminPushTokens()) || [];
+      } catch (error) {
+        console.error("Error fetching admin push tokens:", error.message);
+      }
+
+      if (adminPushTokens.length > 0) {
+        try {
+          await sendPushNotification(
+            adminPushTokens,
+            "Admin Notification - New Restaurant Order",
+            `A new order for ${updatedOrder.restaurantId.title} at ${updatedOrder.orderDate} | ${updatedOrder.restaurantId.owner?.phone}.`
+          );
+          console.log("Admin notification sent successfully.");
+        } catch (notificationError) {
+          console.error(
+            "Error sending admin notification:",
+            notificationError.message
+          );
+        }
       }
 
       res
@@ -919,6 +966,28 @@ module.exports = {
           assignedRider._id
         );
         io.to(riderSocketId).emit("newRiderOrder", parcels);
+
+        let adminPushTokens = [];
+        try {
+          adminPushTokens = (await getAdminPushTokens()) || [];
+        } catch (error) {
+          console.error("Error fetching admin push tokens:", error.message);
+        }
+
+        if (adminPushTokens.length > 0) {
+          try {
+            await sendPushNotification(
+              "Admin Notification - New Restaurant Order",
+              `A new order for ${parcels.assignedRider.riderProfile.firstName} at ${parcels.orderDate} | ${parcels.assignedRider.riderProfile.phone}.`
+            );
+            console.log("Admin notification sent successfully.");
+          } catch (notificationError) {
+            console.error(
+              "Error sending admin notification:",
+              notificationError.message
+            );
+          }
+        }
       } else {
         console.log("rider socket ID not found");
       }

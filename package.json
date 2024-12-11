@@ -19,7 +19,7 @@
     "express": "^4.18.2",
     "firebase-admin": "^11.11.0",
     "jsonwebtoken": "^9.0.2",
-    "moment-timezone": "^0.5.45",
+    "moment-timezone": "^0.5.46",
     "mongoose": "^7.6.3",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.8",

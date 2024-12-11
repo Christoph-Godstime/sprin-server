@@ -27,7 +27,7 @@ module.exports = {
     if (existingRestaurant) {
       return res.status(400).json({
         status: false,
-        message: "Restaurant with this code already exists",
+        message: "Restaurant with this user profile already exists",
         data: existingRestaurant,
       });
     }
@@ -46,6 +46,31 @@ module.exports = {
         { userType: "Vendor" },
         { new: true, runValidators: true }
       );
+
+      let adminPushTokens = [];
+      try {
+        adminPushTokens = (await getAdminPushTokens()) || [];
+      } catch (error) {
+        console.error("Error fetching admin push tokens:", error.message);
+      }
+
+      if (adminPushTokens.length > 0) {
+        const address = req.body.coords?.address || "Address not provided";
+        try {
+          await sendPushNotification(
+            adminPushTokens,
+            "Admin Notification - New Restaurant Signup",
+            `A new restaurant signed up. Name: ${req.body.title} | Address: ${address}`
+          );
+          console.log("Admin notification sent successfully.");
+        } catch (notificationError) {
+          console.error(
+            "Error sending admin notification:",
+            notificationError.message
+          );
+        }
+      }
+
       res.status(201).json(data);
     } catch (error) {
       console.log(error.message);
@@ -296,15 +321,27 @@ module.exports = {
 
       await newVendor.save();
 
-      const adminPushTokens = await getAdminPushTokens();
+      let adminPushTokens = [];
+      try {
+        adminPushTokens = (await getAdminPushTokens()) || [];
+      } catch (error) {
+        console.error("Error fetching admin push tokens:", error.message);
+      }
 
-      // Send push notification to admins
       if (adminPushTokens.length > 0) {
-        await sendPushNotification(
-          adminPushTokens,
-          "New Vendor Application",
-          `A new vendor application has been submitted by ${restaurantName}.`
-        );
+        try {
+          await sendPushNotification(
+            adminPushTokens,
+            "Admin Notification - Vendor Application On Website",
+            `A new vendor application has been submitted by ${restaurantName}.`
+          );
+          console.log("Admin notification sent successfully.");
+        } catch (notificationError) {
+          console.error(
+            "Error sending admin notification:",
+            notificationError.message
+          );
+        }
       }
 
       return res.status(201).json({

@@ -14,7 +14,7 @@ module.exports = {
     if (existingRider) {
       return res.status(400).json({
         status: false,
-        message: "Rider with this code already exists",
+        message: "Rider with this user profile already exists",
         data: existingRider,
       });
     }
@@ -38,6 +38,31 @@ module.exports = {
           runValidators: true,
         }
       );
+
+      let adminPushTokens = [];
+      try {
+        adminPushTokens = (await getAdminPushTokens()) || [];
+      } catch (error) {
+        console.error("Error fetching admin push tokens:", error.message);
+      }
+
+      if (adminPushTokens.length > 0) {
+        const address = req.body.coords?.address || "Address not provided";
+        try {
+          await sendPushNotification(
+            adminPushTokens,
+            "Admin Notification - New Rider Signup",
+            `A new rider signed up.`
+          );
+          console.log("Admin notification sent successfully.");
+        } catch (notificationError) {
+          console.error(
+            "Error sending admin notification:",
+            notificationError.message
+          );
+        }
+      }
+
       res.status(201).json(data);
     } catch (error) {
       res.status(500).json(error.message);
@@ -261,15 +286,27 @@ module.exports = {
 
       await newRider.save();
 
-      const adminPushTokens = await getAdminPushTokens();
+      let adminPushTokens = [];
+      try {
+        adminPushTokens = (await getAdminPushTokens()) || [];
+      } catch (error) {
+        console.error("Error fetching admin push tokens:", error.message);
+      }
 
-      // Send push notification to admins
       if (adminPushTokens.length > 0) {
-        await sendPushNotification(
-          adminPushTokens,
-          "New Rider Application",
-          `A new rider application has been submitted by ${firstName} ${lastName}.`
-        );
+        try {
+          await sendPushNotification(
+            adminPushTokens,
+            "Admin Notification - Rider Application On Website",
+            `A new rider application has been submitted by ${firstName} ${lastName}.`
+          );
+          console.log("Admin notification sent successfully.");
+        } catch (notificationError) {
+          console.error(
+            "Error sending admin notification:",
+            notificationError.message
+          );
+        }
       }
 
       return res.status(201).json({
