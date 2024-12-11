@@ -65,6 +65,21 @@ const processRiderPayment = async (order) => {
   await payment.save();
 };
 
+const convertToNigerianTime = (utcDateString) => {
+  const utcDate = new Date(utcDateString); // Parse the given date
+  const options = {
+    timeZone: "Africa/Lagos", // Nigerian time zone
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+  };
+  const formatter = new Intl.DateTimeFormat("en-NG", options);
+  return formatter.format(utcDate); // Return the formatted date
+};
+
 module.exports = {
   calculateOrderDetails: async (req, res) => {
     const userId = req.user.id;
@@ -269,10 +284,11 @@ module.exports = {
 
         if (adminPushTokens.length > 0) {
           try {
+            const nigerianTime = convertToNigerianTime(updatedOrder.orderDate);
             await sendPushNotification(
               adminPushTokens,
               "Admin Notification - New Restaurant Order",
-              `A new order for ${updatedOrder.restaurantId.title} at ${updatedOrder.orderDate} | ${updatedOrder.restaurantId.owner?.phone}.`
+              `A new order for ${updatedOrder.restaurantId.title} at ${nigerianTime} | ${updatedOrder.restaurantId.owner?.phone}.`
             );
             console.log("Admin notification sent successfully.");
           } catch (notificationError) {
@@ -380,10 +396,12 @@ module.exports = {
 
       if (adminPushTokens.length > 0) {
         try {
+          const nigerianTime = convertToNigerianTime(updatedOrder.orderDate);
+
           await sendPushNotification(
             adminPushTokens,
             "Admin Notification - New Restaurant Order",
-            `A new order for ${updatedOrder.restaurantId.title} at ${updatedOrder.orderDate} | ${updatedOrder.restaurantId.owner?.phone}.`
+            `A new order for ${updatedOrder.restaurantId.title} on ${nigerianTime} | ${updatedOrder.restaurantId.owner?.phone}.`
           );
           console.log("Admin notification sent successfully.");
         } catch (notificationError) {
@@ -976,9 +994,10 @@ module.exports = {
 
         if (adminPushTokens.length > 0) {
           try {
+            const nigerianTime = convertToNigerianTime(parcels.orderDate);
             await sendPushNotification(
-              "Admin Notification - New Restaurant Order",
-              `A new order for ${parcels.assignedRider.riderProfile.firstName} at ${parcels.orderDate} | ${parcels.assignedRider.riderProfile.phone}.`
+              "Admin Notification - New Rider Order",
+              `A new order for ${parcels.assignedRider.riderProfile.firstName} on ${nigerianTime} | ${parcels.assignedRider.riderProfile.phone}.`
             );
             console.log("Admin notification sent successfully.");
           } catch (notificationError) {
