@@ -5,10 +5,11 @@ const Restaurant = require("../models/Restaurant");
 const RiderApplication = require("../models/RiderApplication");
 const sendPushNotification = require("../utils/sendPushNotification");
 const { getAdminPushTokens } = require("../utils/adminPushTokens");
+const mongoose = require("mongoose");
 
 module.exports = {
   addRider: async (req, res) => {
-    const riderProfile = mongoose.Types.ObjectId(req.user.id);
+    const riderProfile = new mongoose.Types.ObjectId(req.user.id);
 
     const existingRider = await Rider.findOne({ riderProfile: riderProfile });
     if (existingRider) {

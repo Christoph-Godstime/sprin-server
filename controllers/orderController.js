@@ -288,7 +288,7 @@ module.exports = {
             await sendPushNotification(
               adminPushTokens,
               "Admin Notification - New Restaurant Order",
-              `A new order for ${updatedOrder.restaurantId.title} at ${nigerianTime} | ${updatedOrder.restaurantId.owner?.phone}.`
+              `A new order for ${updatedOrder.restaurantId.title} on ${nigerianTime} | ${updatedOrder.restaurantId.owner?.phone}.`
             );
             console.log("Admin notification sent successfully.");
           } catch (notificationError) {
@@ -713,7 +713,13 @@ module.exports = {
             orderId,
             req
           );
-          if (!assignResult.status) {
+          if (
+            !assignResult.status &&
+            order.previouslyAssignedRiders?.length === 0
+          ) {
+            updateFields.orderStatus = "Ready";
+            updateFields.riderAssignedTime = currentTime;
+          } else if (!assignResult.status) {
             return res.status(500).json(assignResult);
           }
           console.log("assigning order after");
