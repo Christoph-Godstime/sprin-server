@@ -87,7 +87,6 @@ module.exports = {
 
     try {
       let discountAmount = 0;
-      let discountedDeliveryFee = deliveryFee;
       let walletBalance = 0;
       let grandTotal = orderTotal + deliveryFee;
       let referrerId = null;
@@ -100,6 +99,12 @@ module.exports = {
       let walletPayment = false;
       let partialWalletPayment = false;
 
+      // Helper function to round to the nearest ten
+      const roundToNearestTen = (value) => Math.ceil(value / 10) * 10;
+
+      // Round up deliveryFee to the nearest ten
+      const roundedDeliveryFee = roundToNearestTen(deliveryFee);
+
       // Fetch user wallet balance
       const user = await User.findById(userId);
       if (!user) {
@@ -109,7 +114,6 @@ module.exports = {
       }
       walletBalance = user.walletBalance;
       const originalWalletBalance = user.walletBalance;
-      const riderDeliveryFee = parseFloat((deliveryFee * 0.85).toFixed(2));
 
       // Check free delivery eligibility
       const orderCount = await Order.countDocuments({
@@ -117,11 +121,19 @@ module.exports = {
         paymentStatus: "Completed",
       });
       freeDelivery = orderCount % 10 === 0 || orderCount % 10 === 1;
+
+      let discountedDeliveryFee = roundedDeliveryFee;
       if (freeDelivery) {
         discountedDeliveryFee = 0;
       } else {
-        discountedDeliveryFee = parseFloat((deliveryFee * 0.85).toFixed(2));
+        discountedDeliveryFee = roundToNearestTen(
+          parseFloat((roundedDeliveryFee * 0.85).toFixed(2))
+        );
       }
+
+      const riderDeliveryFee = roundToNearestTen(
+        parseFloat((discountedDeliveryFee * 0.85).toFixed(2))
+      );
 
       // Validate promo code if provided
       if (promoCode) {
@@ -185,8 +197,9 @@ module.exports = {
         status: true,
         orderTotal,
         normalDeliveryFee: deliveryFee,
-        discountedDeliveryFee,
-        riderDeliveryFee: riderDeliveryFee,
+        roundedDeliveryFee, // Rounded delivery fee
+        discountedDeliveryFee, // Rounded discounted delivery fee
+        riderDeliveryFee, // Rounded rider delivery fee
         freeDelivery,
         originalWalletBalance,
         walletBalance,
