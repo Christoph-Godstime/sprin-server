@@ -131,8 +131,12 @@ module.exports = {
         );
       }
 
+      // const riderDeliveryFee = roundToNearestTen(
+      //   parseFloat((discountedDeliveryFee * 0.85).toFixed(2))
+      // );
+
       const riderDeliveryFee = roundToNearestTen(
-        parseFloat((discountedDeliveryFee * 0.85).toFixed(2))
+        parseFloat(discountedDeliveryFee.toFixed(2))
       );
 
       // Validate promo code if provided
