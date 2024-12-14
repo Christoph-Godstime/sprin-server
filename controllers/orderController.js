@@ -713,12 +713,14 @@ module.exports = {
             orderId,
             req
           );
+
+          const backdatedTime = new Date(currentTime.getTime() - 3 * 60 * 1000); // Subtract 3 minutes
           if (
             !assignResult.status &&
             order.previouslyAssignedRiders?.length === 0
           ) {
             updateFields.orderStatus = "Ready";
-            updateFields.riderAssignedTime = currentTime;
+            updateFields.riderAssignedTime = backdatedTime;
           } else if (!assignResult.status) {
             return res.status(500).json(assignResult);
           }

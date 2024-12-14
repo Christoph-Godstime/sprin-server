@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const Restaurant = require("../models/Restaurant");
 const Rider = require("../models/Rider");
+const Rate = require("../models/Rate");
 const CryptoJS = require("crypto-js");
 const jwt = require("jsonwebtoken");
 const admin = require("firebase-admin");
@@ -282,6 +283,102 @@ module.exports = {
         status: true,
         message: `Restaurant has been ${status.toLowerCase()} and the owner has been notified via email.`,
         restaurant: updatedRestaurant,
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        status: false,
+        message: error.message,
+      });
+    }
+  },
+
+  createRatePerKm: async (req, res) => {
+    try {
+      const { ratePerKm } = req.body;
+
+      // Ensure the user is an admin
+      if (req.user.userType !== "Admin") {
+        return res.status(403).json({
+          status: false,
+          message: "Only admins can create the rate per kilometer.",
+        });
+      }
+
+      // Validate the rate
+      if (!ratePerKm || typeof ratePerKm !== "number" || ratePerKm <= 0) {
+        return res.status(400).json({
+          status: false,
+          message: "Invalid rate. Must be a positive number.",
+        });
+      }
+
+      // Check if a rate already exists
+      const existingRate = await Rate.findOne();
+      if (existingRate) {
+        return res.status(400).json({
+          status: false,
+          message: "Rate per kilometer already exists. Use update instead.",
+        });
+      }
+
+      // Create a new rate
+      const newRate = new Rate({ ratePerKm });
+      await newRate.save();
+
+      return res.status(201).json({
+        status: true,
+        message: "Rate per kilometer created successfully.",
+        ratePerKm: newRate.ratePerKm,
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        status: false,
+        message: error.message,
+      });
+    }
+  },
+
+  // Update the rate per kilometer
+  updateRatePerKm: async (req, res) => {
+    try {
+      const { ratePerKm } = req.body;
+
+      // Ensure the user is an admin
+      if (req.user.userType !== "Admin") {
+        return res.status(403).json({
+          status: false,
+          message: "Only admins can update the rate per kilometer.",
+        });
+      }
+
+      // Validate the rate
+      if (!ratePerKm || typeof ratePerKm !== "number" || ratePerKm <= 0) {
+        return res.status(400).json({
+          status: false,
+          message: "Invalid rate. Must be a positive number.",
+        });
+      }
+
+      // Find and update the rate
+      const updatedRate = await Rate.findOneAndUpdate(
+        {},
+        { ratePerKm },
+        { new: true }
+      );
+
+      if (!updatedRate) {
+        return res.status(404).json({
+          status: false,
+          message: "Rate per kilometer not found.",
+        });
+      }
+
+      return res.status(200).json({
+        status: true,
+        message: "Rate per kilometer updated successfully.",
+        ratePerKm: updatedRate.ratePerKm,
       });
     } catch (error) {
       console.error(error);

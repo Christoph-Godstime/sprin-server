@@ -255,7 +255,7 @@ module.exports = {
       const otp = generateOtp();
 
       user.resetPasswordToken = otp;
-      user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+      user.resetPasswordExpires = Date.now() + 600000;
       await user.save();
 
       await sendResetPasswordEmail(user.email, otp);
@@ -274,16 +274,20 @@ module.exports = {
           .json({ status: false, message: "Password is required" });
       }
 
-      const user = await User.findOne({
-        email: req.body.email,
-        resetPasswordToken: req.body.otp,
-        resetPasswordExpires: { $gt: Date.now() },
-      });
+      const user = await User.findOne({ email: req.body.email });
 
       if (!user) {
         return res
-          .status(400)
-          .json({ status: false, message: "Invalid or expired OTP" });
+          .status(404)
+          .json({ status: false, message: "User not found" });
+      }
+
+      if (user.resetPasswordToken !== req.body.otp) {
+        return res.status(400).json({ status: false, message: "Invalid OTP" });
+      }
+
+      if (user.resetPasswordExpires <= Date.now()) {
+        return res.status(400).json({ status: false, message: "Expired OTP" });
       }
 
       user.password = CryptoJS.AES.encrypt(

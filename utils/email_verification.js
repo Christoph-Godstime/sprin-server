@@ -30,7 +30,7 @@ async function sendVerificationEmail(userEmail, verificationCode) {
           <p>Thank you for signing up with Sprin!</p>
           <p>Your verification code is:</p>
           <h2 style="color: #007bff; background-color: #f0f0f0; padding: 10px; border-radius: 4px; display: inline-block;">${verificationCode}</h2>
-          <p>Please enter this code on the verification page to complete your registration process.</p>
+          <p>This verification code is valid for 10 minutes. Please use it to complete your registration within this time frame.</p>
           <p>If you did not request this, please ignore this email.</p>
         </td>
       </tr>

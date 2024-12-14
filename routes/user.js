@@ -45,4 +45,6 @@ router.post(
 
 router.post("/contact_us", userController.contactUs);
 
+router.get("/ratePerKm", userController.getRatePerKm);
+
 module.exports = router;

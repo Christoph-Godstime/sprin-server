@@ -15,4 +15,8 @@ router.post(
   AdminContoller.updateRestaurantStatus
 );
 
+router.post("/ratePerKm", verifyAdmin, AdminContoller.createRatePerKm);
+
+router.put("/ratePerKm", verifyAdmin, AdminContoller.updateRatePerKm);
+
 module.exports = router;

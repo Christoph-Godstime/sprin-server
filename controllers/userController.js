@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const DeleteRequest = require("../models/DeleteRequest");
+const Rate = require("../models/Rate");
 const generateOtp = require("../utils/otp_generator");
 const sendVerificationEmail = require("../utils/email_verification");
 const CryptoJS = require("crypto-js");
@@ -386,15 +387,27 @@ module.exports = {
 
       await newRider.save();
 
-      const adminPushTokens = await getAdminPushTokens();
+      let adminPushTokens = [];
+      try {
+        adminPushTokens = (await getAdminPushTokens()) || [];
+      } catch (error) {
+        console.error("Error fetching admin push tokens:", error.message);
+      }
 
-      // Send push notification to admins
       if (adminPushTokens.length > 0) {
-        await sendPushNotification(
-          adminPushTokens,
-          "Admin Notification - Customer Support Message",
-          `A new customer support message has been submitted by ${firstName} ${lastName}.`
-        );
+        try {
+          await sendPushNotification(
+            adminPushTokens,
+            "Admin Notification - Customer Support Message",
+            `A new customer support message has been submitted by ${firstName} ${lastName}.`
+          );
+          console.log("Admin notification sent successfully.");
+        } catch (notificationError) {
+          console.error(
+            "Error sending admin notification:",
+            notificationError.message
+          );
+        }
       }
 
       return res.status(201).json({
@@ -402,6 +415,29 @@ module.exports = {
       });
     } catch (error) {
       res.status(500).json({ status: false, message: error.message });
+    }
+  },
+
+  getRatePerKm: async (req, res) => {
+    try {
+      const rateData = await Rate.findOne();
+      if (!rateData) {
+        return res.status(404).json({
+          status: false,
+          message: "Rate per kilometer not found.",
+        });
+      }
+
+      return res.status(200).json({
+        status: true,
+        ratePerKm: rateData.ratePerKm,
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        status: false,
+        message: error.message,
+      });
     }
   },
 };
