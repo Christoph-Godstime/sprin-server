@@ -47,6 +47,13 @@ router.get(
   riderController.getRiderFeedback
 );
 
+router.put(
+  "/:id/coordinates",
+  verifyTokenAndAuthorization,
+  verifyRider,
+  riderController.updateRiderCoordinate
+);
+
 router.post("/rider_application", riderController.addRiderInformation);
 
 module.exports = router;

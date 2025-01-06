@@ -6,7 +6,7 @@ const CryptoJS = require("crypto-js");
 const jwt = require("jsonwebtoken");
 const admin = require("firebase-admin");
 const sendVerificationEmail = require("../utils/email_verification");
-const restaurantVerification = require("../utils/email_restaurantVerification");
+const restaurantAndRiderVerification = require("../utils/email_restaurantAndRiderVerification");
 const generateOtp = require("../utils/otp_generator");
 const {
   hash,
@@ -277,12 +277,124 @@ module.exports = {
       `;
 
       // Send email notification to the restaurant owner
-      await restaurantVerification(ownerEmail, subject, htmlContent);
+      await restaurantAndRiderVerification(ownerEmail, subject, htmlContent);
 
       return res.status(200).json({
         status: true,
         message: `Restaurant has been ${status.toLowerCase()} and the owner has been notified via email.`,
         restaurant: updatedRestaurant,
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        status: false,
+        message: error.message,
+      });
+    }
+  },
+
+  updateRiderStatus: async (req, res) => {
+    try {
+      const { riderId, status, message } = req.body;
+
+      // Ensure the user is an admin
+      if (req.user.userType !== "Admin") {
+        return res.status(403).json({
+          status: false,
+          message: "Only admins can update rider verification status.",
+        });
+      }
+
+      // Validate the status
+      const validStatuses = ["Verified", "Rejected"];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({
+          status: false,
+          message:
+            "Invalid status. Allowed values are 'Verified' or 'Rejected'.",
+        });
+      }
+
+      // Find the rider
+      const rider = await Rider.findById(riderId).populate(
+        "riderProfile",
+        "email firstName lastName"
+      );
+      if (!rider) {
+        return res.status(404).json({
+          status: false,
+          message: "Rider not found.",
+        });
+      }
+
+      // Check if the rider is already verified
+      if (rider.verification === "Verified" && status === "Verified") {
+        return res.status(400).json({
+          status: false,
+          message: "The rider is already verified.",
+        });
+      }
+
+      // Prepare update data
+      const updateData = {
+        verification: status,
+      };
+
+      if (status === "Rejected" && message) {
+        updateData.verificationMessage = message;
+      }
+
+      // Update rider status
+      const updatedRider = await Rider.findByIdAndUpdate(riderId, updateData, {
+        new: true,
+      }).populate("riderProfile", "email firstName lastName");
+
+      // Prepare email content
+      const ownerEmail = updatedRider.riderProfile.email;
+      const subject = `Your rider account has been ${status.toLowerCase()}`;
+      const htmlContent = `
+        <html>
+          <body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4;">
+            <table align="center" width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
+              <tr>
+                <td style="text-align: center; padding-bottom: 20px;">
+                  <img src="https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/sprin-images%2Fsprin.png?alt=media&token=09e6548d-6f53-4f93-a42a-faa117abe41f" alt="Sprin Logo" style="width: 120px; margin-bottom: 20px;">
+                  <h1 style="color: #333;">${
+                    status === "Verified"
+                      ? "Congratulations!"
+                      : "Unfortunately, Your Rider Account Has Been Rejected"
+                  }</h1>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding-bottom: 20px; color: #555;">
+                  ${
+                    status === "Verified"
+                      ? `<p>Your rider account has been successfully verified.</p>
+                         <p>You can now log in to the rider app and start delivering orders.</p>
+                         <p>If you have any questions or need assistance, please <a href="https://www.sprinapp.com/contact" style="color: #007bff; text-decoration: none;">contact support</a>.</p>`
+                      : `<p>Reason: ${message}</p>
+                         <p>Please <a href="https://www.sprinapp.com/contact" style="color: #007bff; text-decoration: none;">contact support</a> if you have any questions or wish to appeal this decision.</p>`
+                  }
+                </td>
+              </tr>
+              <tr>
+                <td style="padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #777;">
+                  <p style="margin: 0; font-size: 12px;">&copy; ${new Date().getFullYear()} Sprin Technologies. All rights reserved.</p>
+                </td>
+              </tr>
+            </table>
+          </body>
+        </html>
+      `;
+
+      // Send email notification to the rider account owner
+      await restaurantAndRiderVerification(ownerEmail, subject, htmlContent);
+
+      return res.status(200).json({
+        status: true,
+        message: `Rider has been ${status.toLowerCase()} and the owner has been notified via email.`,
+        rider: updatedRider,
       });
     } catch (error) {
       console.error(error);

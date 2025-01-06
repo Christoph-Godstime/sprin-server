@@ -13,9 +13,9 @@ const formatTime = (date) => {
 
 const reassignUnacceptedOrders = (io, userSocketMap) => async () => {
   try {
-    const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
+    const threeMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
 
-    // Find orders that are in "Rider Assigned" status and were assigned more than 3 minutes ago
+    // Find orders that are in "Rider Assigned" status and were assigned more than 10 minutes ago
     const ordersToReassign = await Order.find({
       orderStatus: { $in: ["Ready", "Rider Assigned"] },
       riderAssignedTime: { $lte: threeMinutesAgo },

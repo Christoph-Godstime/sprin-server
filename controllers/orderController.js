@@ -43,8 +43,8 @@ const processRestaurantPayment = async (order) => {
 const processRiderPayment = async (order) => {
   const riderId = order.assignedRider;
   const deliveryFee = order.deliveryFee;
-  const withdrawable = deliveryFee * 0.85;
-  const commission = deliveryFee * 0.15;
+  const withdrawable = deliveryFee * 1;
+  const commission = deliveryFee * 0;
 
   // Find the rider's payment record and update unpaid fields
   let payment = await RiderPayment.findOne({ riderId });
@@ -731,7 +731,9 @@ module.exports = {
             req
           );
 
-          const backdatedTime = new Date(currentTime.getTime() - 3 * 60 * 1000); // Subtract 3 minutes
+          const backdatedTime = new Date(
+            currentTime.getTime() - 10 * 60 * 1000
+          ); // Subtract 3 minutes
           if (
             !assignResult.status &&
             order.previouslyAssignedRiders?.length === 0
@@ -1009,31 +1011,43 @@ module.exports = {
           assignedRider._id
         );
         io.to(riderSocketId).emit("newRiderOrder", parcels);
-
-        let adminPushTokens = [];
-        try {
-          adminPushTokens = (await getAdminPushTokens()) || [];
-        } catch (error) {
-          console.error("Error fetching admin push tokens:", error.message);
-        }
-
-        if (adminPushTokens.length > 0) {
-          try {
-            const nigerianTime = convertToNigerianTime(parcels.orderDate);
-            await sendPushNotification(
-              "Admin Notification - New Rider Order",
-              `A new order for ${parcels.assignedRider.riderProfile.firstName} on ${nigerianTime} | ${parcels.assignedRider.riderProfile.phone}.`
-            );
-            console.log("Admin notification sent successfully.");
-          } catch (notificationError) {
-            console.error(
-              "Error sending admin notification:",
-              notificationError.message
-            );
-          }
-        }
       } else {
         console.log("rider socket ID not found");
+      }
+
+      const riderPushToken = parcels.assignedRider.riderProfile?.expoPushToken;
+
+      if (riderPushToken) {
+        await sendPushNotification(
+          [riderPushToken],
+          "New Order Alert 🚀",
+          "You have a new delivery request! Open the app to check the details and take action promptly."
+        );
+      } else {
+        console.error("Rider's expoPushToken not found.");
+      }
+
+      let adminPushTokens = [];
+      try {
+        adminPushTokens = (await getAdminPushTokens()) || [];
+      } catch (error) {
+        console.error("Error fetching admin push tokens:", error.message);
+      }
+
+      if (adminPushTokens.length > 0) {
+        try {
+          const nigerianTime = convertToNigerianTime(parcels.orderDate);
+          await sendPushNotification(
+            "Admin Notification - New Rider Order",
+            `A new order for ${parcels.assignedRider.riderProfile.firstName} on ${nigerianTime} | ${parcels.assignedRider.riderProfile.phone}.`
+          );
+          console.log("Admin notification sent successfully.");
+        } catch (notificationError) {
+          console.error(
+            "Error sending admin notification:",
+            notificationError.message
+          );
+        }
       }
 
       return { status: true, message: "Order assigned to rider" };

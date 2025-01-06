@@ -1,8 +1,8 @@
-// restaurantVerification.js
+// restaurantAndRiderVerification.js
 const nodemailer = require("nodemailer");
 const dotenv = require("dotenv").config();
 
-async function restaurantVerification(userEmail, subject, htmlContent) {
+async function restaurantAndRiderVerification(userEmail, subject, htmlContent) {
   // SMTP configuration
   const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -23,10 +23,10 @@ async function restaurantVerification(userEmail, subject, htmlContent) {
   // Sending email
   try {
     await transporter.sendMail(mailOptions);
-    console.log("Restaurant verification email sent successfully");
+    console.log("Verification email sent successfully");
   } catch (error) {
     console.log("Email send failed with error:", error);
   }
 }
 
-module.exports = restaurantVerification;
+module.exports = restaurantAndRiderVerification;

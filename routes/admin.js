@@ -15,6 +15,8 @@ router.post(
   AdminContoller.updateRestaurantStatus
 );
 
+router.post("/verify-rider", verifyAdmin, AdminContoller.updateRiderStatus);
+
 router.post("/ratePerKm", verifyAdmin, AdminContoller.createRatePerKm);
 
 router.put("/ratePerKm", verifyAdmin, AdminContoller.updateRatePerKm);
