@@ -739,7 +739,7 @@ module.exports = {
             order.previouslyAssignedRiders?.length === 0
           ) {
             updateFields.orderStatus = "Ready";
-            updateFields.riderAssignedTime = backdatedTime;
+            // updateFields.riderAssignedTime = backdatedTime;
           } else if (!assignResult.status) {
             return res.status(500).json(assignResult);
           }
@@ -944,7 +944,15 @@ module.exports = {
       console.log("available rider: ", availableRiders);
 
       if (availableRiders.length === 0) {
-        throw new Error("No available riders found");
+        // No available riders: Set status to "Ready" and backdate riderAssignedTime
+        order.orderStatus = "Ready";
+        order.riderAssignedTime = new Date(Date.now() - 10 * 60 * 1000); // Backdate by 10 minutes
+        await order.save();
+
+        return {
+          status: true,
+          message: "No available rider; order set to Ready",
+        };
       }
 
       const assignedRider = availableRiders[0];
