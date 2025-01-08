@@ -5,6 +5,9 @@ const RiderBankDetails = require("../models/RiderBankDetails");
 const sendRiderPayoutApprovalEmail = require("../utils/email_riderPayoutApproval");
 const generateOtp = require("../utils/otp_generator");
 const sendBankDetailsEmail = require("../utils/email_bankDetails");
+const sendPushNotification = require("../utils/sendPushNotification");
+const { getAdminPushTokens } = require("../utils/adminPushTokens");
+const { convertToNigerianTime } = require("../utils/helper");
 
 module.exports = {
   requestPayout: async (req, res) => {
@@ -91,6 +94,33 @@ module.exports = {
 
       await paymentHistory.save();
 
+      let adminPushTokens = [];
+      try {
+        adminPushTokens = (await getAdminPushTokens()) || [];
+      } catch (error) {
+        console.error("Error fetching admin push tokens:", error.message);
+      }
+
+      // Send push notifications to admins
+      if (adminPushTokens.length > 0) {
+        try {
+          const nigerianTime = new Date().toLocaleString("en-NG", {
+            timeZone: "Africa/Lagos",
+          });
+          await sendPushNotification(
+            adminPushTokens,
+            "Admin Notification - New Payout Request",
+            `A new payout request has been made by rider ID: ${riderId}, Account name: ${accountName} on ${nigerianTime}.`
+          );
+          console.log("Admin notification sent successfully.");
+        } catch (notificationError) {
+          console.error(
+            "Error sending admin notification:",
+            notificationError.message
+          );
+        }
+      }
+
       res.status(200).json({
         status: true,
         message: "Payout request submitted successfully",
@@ -100,91 +130,6 @@ module.exports = {
       res.status(500).json({
         status: false,
         message: "An error occurred while requesting payout.",
-        error: error.message,
-      });
-    }
-  },
-
-  approvePayout: async (req, res) => {
-    const { payoutRequestId } = req.params;
-
-    try {
-      const payoutRequest = await RiderPayoutRequest.findById(payoutRequestId);
-
-      if (!payoutRequest) {
-        return res
-          .status(404)
-          .json({ status: false, message: "Payout request not found." });
-      }
-
-      // Check if the payout request is still pending
-      if (payoutRequest.status !== "Pending") {
-        return res.status(400).json({
-          status: false,
-          message:
-            "This payout request has already been processed or approved.",
-        });
-      }
-
-      const payment = await RiderPayment.findOne({
-        riderId: payoutRequest.riderId,
-      });
-
-      if (!payment) {
-        return res.status(404).json({
-          status: false,
-          message: "No payment records found for this rider.",
-        });
-      }
-
-      // Check if the pending withdrawable is enough to fulfill the request
-      if (payment.pending.withdrawable < payoutRequest.amount) {
-        return res.status(400).json({
-          status: false,
-          message: "Insufficient pending funds to approve this payout.",
-        });
-      }
-
-      // Move the amount and commission for this specific request from pending to paid
-      payment.paid.totalOrders += payoutRequest.orderNumber; // Increment totalOrders by the number of orders associated with the payout request
-      payment.paid.withdrawable += payoutRequest.amount;
-      payment.paid.commission += payoutRequest.commissionAmount; // Use commissionAmount from the payout request
-
-      // Reduce the pending values accordingly
-      payment.pending.totalOrders -= payoutRequest.orderNumber; // Decrease totalOrders in pending by the same count
-      payment.pending.withdrawable -= payoutRequest.amount;
-      payment.pending.commission -= payoutRequest.commissionAmount; // Reduce by the specific commission amount
-
-      await payment.save();
-
-      // Update the payout request status to 'Approved'
-      payoutRequest.status = "Approved";
-      await payoutRequest.save();
-
-      // Update payment history entry
-      const paymentHistory = await RiderPaymentHistory.findOne({
-        riderId: payoutRequest.riderId,
-        amount: payoutRequest.amount,
-        status: "Pending",
-      });
-
-      if (paymentHistory) {
-        paymentHistory.status = "Completed";
-        paymentHistory.completedAt = new Date();
-        await paymentHistory.save();
-      }
-
-      await sendRiderPayoutApprovalEmail(payoutRequest.email);
-
-      res.status(200).json({
-        status: true,
-        message: "Payout request approved successfully",
-        data: payoutRequest,
-      });
-    } catch (error) {
-      res.status(500).json({
-        status: false,
-        message: "An error occurred while approving payout.",
         error: error.message,
       });
     }

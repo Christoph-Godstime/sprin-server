@@ -13,12 +13,6 @@ router.post(
   riderPaymentController.requestPayout
 );
 
-router.post(
-  "/payout/approve/:payoutRequestId",
-  verifyAdmin,
-  riderPaymentController.approvePayout
-);
-
 router.get(
   "/history/:riderId",
   verifyTokenAndAuthorization,

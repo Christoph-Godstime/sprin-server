@@ -106,5 +106,20 @@ exports.shuffle = (array) => {
     ];
   }
 
+  exports.convertToNigerianTime = (utcDateString) => {
+    const utcDate = new Date(utcDateString); // Parse the given date
+    const options = {
+      timeZone: "Africa/Lagos", // Nigerian time zone
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
+    };
+    const formatter = new Intl.DateTimeFormat("en-NG", options);
+    return formatter.format(utcDate); // Return the formatted date
+  };
+
   return array;
 };

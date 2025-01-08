@@ -1,6 +1,10 @@
 const User = require("../models/User");
 const Restaurant = require("../models/Restaurant");
 const Rider = require("../models/Rider");
+const RiderPayment = require("../models/RiderPayment");
+const RiderPayoutRequest = require("../models/RiderPayoutRequest");
+const RiderPaymentHistory = require("../models/RiderPaymentHistory");
+const RiderBankDetails = require("../models/RiderBankDetails");
 const Rate = require("../models/Rate");
 const CryptoJS = require("crypto-js");
 const jwt = require("jsonwebtoken");
@@ -497,6 +501,121 @@ module.exports = {
       return res.status(500).json({
         status: false,
         message: error.message,
+      });
+    }
+  },
+
+  getPendingPayoutRequests: async (req, res) => {
+    try {
+      // Fetch all pending payout requests and populate rider details
+      const pendingRequests = await RiderPayoutRequest.find({
+        status: "Pending",
+      })
+        .populate("riderId") // Populate the rider details using the `riderId` reference
+        .exec();
+
+      if (!pendingRequests.length) {
+        return res.status(404).json({
+          status: false,
+          message: "No pending payout requests found.",
+        });
+      }
+
+      res.status(200).json({
+        status: true,
+        message: "Pending payout requests retrieved successfully.",
+        data: pendingRequests,
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while fetching pending payout requests.",
+        error: error.message,
+      });
+    }
+  },
+
+  approvePayout: async (req, res) => {
+    const { payoutRequestId } = req.params;
+
+    try {
+      const payoutRequest = await RiderPayoutRequest.findById(payoutRequestId);
+
+      if (!payoutRequest) {
+        return res
+          .status(404)
+          .json({ status: false, message: "Payout request not found." });
+      }
+
+      // Check if the payout request is still pending
+      if (payoutRequest.status !== "Pending") {
+        return res.status(400).json({
+          status: false,
+          message:
+            "This payout request has already been processed or approved.",
+        });
+      }
+
+      const payment = await RiderPayment.findOne({
+        riderId: payoutRequest.riderId,
+      });
+
+      if (!payment) {
+        return res.status(404).json({
+          status: false,
+          message: "No payment records found for this rider.",
+        });
+      }
+
+      // Check if the pending withdrawable is enough to fulfill the request
+      if (payment.pending.withdrawable < payoutRequest.amount) {
+        return res.status(400).json({
+          status: false,
+          message: "Insufficient pending funds to approve this payout.",
+        });
+      }
+
+      // Move the amount and commission for this specific request from pending to paid
+      payment.paid.totalOrders += payoutRequest.orderNumber; // Increment totalOrders by the number of orders associated with the payout request
+      payment.paid.withdrawable += payoutRequest.amount;
+      payment.paid.commission += payoutRequest.commissionAmount; // Use commissionAmount from the payout request
+
+      // Reduce the pending values accordingly
+      payment.pending.totalOrders -= payoutRequest.orderNumber; // Decrease totalOrders in pending by the same count
+      payment.pending.withdrawable -= payoutRequest.amount;
+      payment.pending.commission -= payoutRequest.commissionAmount; // Reduce by the specific commission amount
+
+      await payment.save();
+
+      // Update the payout request status to 'Approved'
+      payoutRequest.status = "Approved";
+      await payoutRequest.save();
+
+      // Update payment history entry
+      const paymentHistory = await RiderPaymentHistory.findOne({
+        riderId: payoutRequest.riderId,
+        amount: payoutRequest.amount,
+        status: "Pending",
+      });
+
+      if (paymentHistory) {
+        paymentHistory.status = "Completed";
+        paymentHistory.completedAt = new Date();
+        await paymentHistory.save();
+      }
+
+      await sendRiderPayoutApprovalEmail(payoutRequest.email);
+
+      res.status(200).json({
+        status: true,
+        message: "Payout request approved successfully",
+        data: payoutRequest,
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while approving payout.",
+        error: error.message,
       });
     }
   },

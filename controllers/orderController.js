@@ -10,6 +10,7 @@ const axios = require("axios");
 const mongoose = require("mongoose");
 const sendPushNotification = require("../utils/sendPushNotification");
 const { getAdminPushTokens } = require("../utils/adminPushTokens");
+const { convertToNigerianTime } = require("../utils/helper");
 
 const generateSecretCode = () => {
   return Math.floor(1000 + Math.random() * 9000).toString();
@@ -63,21 +64,6 @@ const processRiderPayment = async (order) => {
   payment.total.commission += commission;
 
   await payment.save();
-};
-
-const convertToNigerianTime = (utcDateString) => {
-  const utcDate = new Date(utcDateString); // Parse the given date
-  const options = {
-    timeZone: "Africa/Lagos", // Nigerian time zone
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "numeric",
-    second: "numeric",
-  };
-  const formatter = new Intl.DateTimeFormat("en-NG", options);
-  return formatter.format(utcDate); // Return the formatted date
 };
 
 module.exports = {

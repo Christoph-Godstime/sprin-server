@@ -21,4 +21,16 @@ router.post("/ratePerKm", verifyAdmin, AdminContoller.createRatePerKm);
 
 router.put("/ratePerKm", verifyAdmin, AdminContoller.updateRatePerKm);
 
+router.post(
+  "/payout/approve/:payoutRequestId",
+  verifyAdmin,
+  AdminContoller.approvePayout
+);
+
+router.get(
+  "/payouts/pending",
+  verifyAdmin,
+  AdminContoller.getPendingPayoutRequests
+);
+
 module.exports = router;

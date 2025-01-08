@@ -5,6 +5,8 @@ const BankDetails = require("../models/BankDetails");
 const sendPayoutApprovalEmail = require("../utils/email_payoutApproval");
 const generateOtp = require("../utils/otp_generator");
 const sendBankDetailsEmail = require("../utils/email_bankDetails");
+const sendPushNotification = require("../utils/sendPushNotification");
+const { getAdminPushTokens } = require("../utils/adminPushTokens");
 
 module.exports = {
   requestPayout: async (req, res) => {
@@ -91,6 +93,33 @@ module.exports = {
       });
 
       await paymentHistory.save();
+
+      let adminPushTokens = [];
+      try {
+        adminPushTokens = (await getAdminPushTokens()) || [];
+      } catch (error) {
+        console.error("Error fetching admin push tokens:", error.message);
+      }
+
+      // Send push notifications to admins
+      if (adminPushTokens.length > 0) {
+        try {
+          const nigerianTime = new Date().toLocaleString("en-NG", {
+            timeZone: "Africa/Lagos",
+          });
+          await sendPushNotification(
+            adminPushTokens,
+            "Admin Notification - New Payout Request",
+            `A new payout request has been made by restaurant ID: ${restaurantId}, Account name: ${accountName} on ${nigerianTime}.`
+          );
+          console.log("Admin notification sent successfully.");
+        } catch (notificationError) {
+          console.error(
+            "Error sending admin notification:",
+            notificationError.message
+          );
+        }
+      }
 
       res.status(200).json({
         status: true,
