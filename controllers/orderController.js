@@ -7,6 +7,7 @@ const Rider = require("../models/Rider");
 const Payment = require("../models/Payment");
 const RiderPayment = require("../models/RiderPayment");
 const CompanyRevenue = require("../models/CompanyRevenue");
+const Address = require("../models/Address");
 const axios = require("axios");
 const mongoose = require("mongoose");
 const sendPushNotification = require("../utils/sendPushNotification");
@@ -568,9 +569,22 @@ module.exports = {
       }
 
       const { latitude: userLat, longitude: userLng } = userAddress;
-      const {
-        coords: [restaurantLat, restaurantLng],
-      } = restaurant;
+
+      const { coords } = restaurant;
+
+      // Validate if coords is an object and contains latitude and longitude
+      if (
+        !coords ||
+        typeof coords.latitude !== "number" ||
+        typeof coords.longitude !== "number"
+      ) {
+        return res.status(400).json({
+          status: false,
+          message: "Invalid restaurant coordinates.",
+        });
+      }
+
+      const { latitude: restaurantLat, longitude: restaurantLng } = coords;
 
       // Function to calculate distance in KM using Haversine formula
       function calculateDistance(lat1, lon1, lat2, lon2) {
