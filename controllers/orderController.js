@@ -337,9 +337,7 @@ module.exports = {
 
         const isFreeDelivery = updatedOrder.freeDelivery;
 
-        const deliveryFee = req.body.deliveryFee
-          ? Number(req.body.deliveryFee)
-          : 0;
+        const deliveryFee = Number(updatedOrder.deliveryFee);
 
         // If it's free delivery
         if (isFreeDelivery) {
@@ -493,9 +491,7 @@ module.exports = {
 
       const isFreeDelivery = updatedOrder.freeDelivery;
 
-      const deliveryFee = req.body.deliveryFee
-        ? Number(req.body.deliveryFee)
-        : 0;
+      const deliveryFee = Number(updatedOrder.deliveryFee);
 
       // If it's free delivery
       if (isFreeDelivery) {
