@@ -400,9 +400,7 @@ module.exports = {
           .json({ status: false, message: "Payment verification failed" });
       }
     } catch (error) {
-      res
-        .status(500)
-        .json({ status: false, message: "Error verifying payment" });
+      res.status(500).json({ status: false, message: error });
     }
   },
 
@@ -550,9 +548,7 @@ module.exports = {
         console.log("restaurant socekt ID not found");
       }
     } catch (error) {
-      res
-        .status(500)
-        .json({ status: false, message: "Error completing wallet payment" });
+      res.status(500).json({ status: false, message: error });
     }
   },
 
