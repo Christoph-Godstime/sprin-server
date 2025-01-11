@@ -286,6 +286,19 @@ module.exports = {
             select: "addressLine1 latitude longitude",
           });
 
+        const restaurantOwnerPushToken =
+          updatedOrder.restaurantId.owner?.expoPushToken;
+
+        if (restaurantOwnerPushToken) {
+          await sendPushNotification(
+            [restaurantOwnerPushToken],
+            "New Order Request 🚀",
+            "You have received a new order! Open the app to view the details and start preparing."
+          );
+        } else {
+          console.error("Restaurant owner's expoPushToken not found.");
+        }
+
         if (referredBy) {
           // Update the referrer's wallet balance and send push notification
           const referrer = await User.findById(referredBy);
@@ -341,19 +354,6 @@ module.exports = {
             },
             { new: true, upsert: true }
           );
-        }
-
-        const restaurantOwnerPushToken =
-          updatedOrder.restaurantId.owner?.expoPushToken;
-
-        if (restaurantOwnerPushToken) {
-          await sendPushNotification(
-            [restaurantOwnerPushToken],
-            "New Order Request 🚀",
-            "You have received a new order! Open the app to view the details and start preparing."
-          );
-        } else {
-          console.error("Restaurant owner's expoPushToken not found.");
         }
 
         let adminPushTokens = [];
@@ -442,6 +442,19 @@ module.exports = {
           select: "addressLine1 latitude longitude",
         });
 
+      const restaurantOwnerPushToken =
+        updatedOrder.restaurantId.owner?.expoPushToken;
+
+      if (restaurantOwnerPushToken) {
+        await sendPushNotification(
+          [restaurantOwnerPushToken],
+          "New Order Request 🚀",
+          "You have received a new order! Open the app to view the details and start preparing."
+        );
+      } else {
+        console.error("Restaurant owner's expoPushToken not found.");
+      }
+
       if (referredBy) {
         // Update the referrer's wallet balance and send push notification
         const referrer = await User.findById(referredBy);
@@ -497,19 +510,6 @@ module.exports = {
           },
           { new: true, upsert: true }
         );
-      }
-
-      const restaurantOwnerPushToken =
-        updatedOrder.restaurantId.owner?.expoPushToken;
-
-      if (restaurantOwnerPushToken) {
-        await sendPushNotification(
-          [restaurantOwnerPushToken],
-          "New Order Request 🚀",
-          "You have received a new order! Open the app to view the details and start preparing."
-        );
-      } else {
-        console.error("Restaurant owner's expoPushToken not found.");
       }
 
       let adminPushTokens = [];
