@@ -324,6 +324,10 @@ module.exports = {
 
         const isFreeDelivery = updatedOrder.freeDelivery;
 
+        const deliveryFee = req.body.deliveryFee
+          ? Number(req.body.deliveryFee)
+          : 0;
+
         // If it's free delivery
         if (isFreeDelivery) {
           // Atomic update for company revenue
@@ -331,8 +335,8 @@ module.exports = {
             {},
             {
               $inc: {
-                freedelivery: req.body.deliveryFee,
-                balance: -req.body.deliveryFee,
+                freedelivery: deliveryFee,
+                balance: -deliveryFee,
               },
             },
             { new: true, upsert: true }
@@ -476,6 +480,10 @@ module.exports = {
 
       const isFreeDelivery = updatedOrder.freeDelivery;
 
+      const deliveryFee = req.body.deliveryFee
+        ? Number(req.body.deliveryFee)
+        : 0;
+
       // If it's free delivery
       if (isFreeDelivery) {
         // Atomic update for company revenue
@@ -483,8 +491,8 @@ module.exports = {
           {},
           {
             $inc: {
-              freedelivery: req.body.deliveryFee,
-              balance: -req.body.deliveryFee,
+              freedelivery: deliveryFee,
+              balance: -deliveryFee,
             },
           },
           { new: true, upsert: true }
