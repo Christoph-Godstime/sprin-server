@@ -11,12 +11,6 @@ router.post(
   paymentController.requestPayout
 );
 
-router.post(
-  "/payout/approve/:payoutRequestId",
-  verifyAdmin,
-  paymentController.approvePayout
-);
-
 router.get(
   "/history/:restaurantId",
   verifyTokenAndAuthorization,

@@ -58,6 +58,7 @@ const orderSchema = new mongoose.Schema(
       ref: "Restaurant",
       required: true,
     },
+    freeDelivery: { type: Boolean, default: false, required: true },
     assignedRider: { type: mongoose.Schema.Types.ObjectId, ref: "Rider" },
     riderRating: { type: Number, required: false },
     riderFeedback: { type: String, required: false },

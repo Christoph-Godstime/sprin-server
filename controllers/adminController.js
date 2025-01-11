@@ -4,7 +4,10 @@ const Rider = require("../models/Rider");
 const RiderPayment = require("../models/RiderPayment");
 const RiderPayoutRequest = require("../models/RiderPayoutRequest");
 const RiderPaymentHistory = require("../models/RiderPaymentHistory");
-const RiderBankDetails = require("../models/RiderBankDetails");
+const Payment = require("../models/Payment");
+const PayoutRequest = require("../models/payoutRequest");
+const PaymentHistory = require("../models/PaymentHistory");
+const sendPayoutApprovalEmail = require("../utils/email_payoutApproval");
 const Rate = require("../models/Rate");
 const CryptoJS = require("crypto-js");
 const jwt = require("jsonwebtoken");
@@ -19,6 +22,7 @@ const {
   capitalizeFirstLetter,
   decapitalize,
 } = require("../utils/helper");
+const sendRiderPayoutApprovalEmail = require("../utils/email_riderPayoutApproval");
 
 const generateReferralCode = async () => {
   let referralCode;
@@ -507,14 +511,44 @@ module.exports = {
 
   getPendingPayoutRequests: async (req, res) => {
     try {
-      // Fetch all pending payout requests and populate rider details
-      const pendingRequests = await RiderPayoutRequest.find({
+      // Fetch all pending rider payout requests and populate rider details
+      const riderPendingRequests = await RiderPayoutRequest.find({
         status: "Pending",
       })
-        .populate("riderId") // Populate the rider details using the `riderId` reference
+        .populate({
+          path: "riderId",
+          populate: {
+            path: "riderProfile",
+            model: "User", // Ensure the correct model name for the User schema
+            select: "firstName lastName email phone", // Include only these fields
+          },
+          select: "riderProfile", // Include only riderProfile field from riderId
+        })
         .exec();
 
-      if (!pendingRequests.length) {
+      // Fetch all pending restaurant payout requests and populate restaurant details
+      const restaurantPendingRequests = await PayoutRequest.find({
+        status: "Pending",
+      })
+        .populate({
+          path: "restaurantId",
+          model: "Restaurant",
+          select: "title email", // Include restaurant title and email
+          populate: {
+            path: "owner",
+            model: "User",
+            select: "firstName lastName email phone", // Include owner's details
+          },
+        })
+        .exec();
+
+      // Combine both rider and restaurant pending requests into one response
+      const combinedRequests = {
+        riderPayoutRequests: riderPendingRequests,
+        restaurantPayoutRequests: restaurantPendingRequests,
+      };
+
+      if (!riderPendingRequests.length && !restaurantPendingRequests.length) {
         return res.status(404).json({
           status: false,
           message: "No pending payout requests found.",
@@ -524,7 +558,7 @@ module.exports = {
       res.status(200).json({
         status: true,
         message: "Pending payout requests retrieved successfully.",
-        data: pendingRequests,
+        data: combinedRequests,
       });
     } catch (error) {
       res.status(500).json({
@@ -616,6 +650,142 @@ module.exports = {
         status: false,
         message: "An error occurred while approving payout.",
         error: error.message,
+      });
+    }
+  },
+
+  restaurantApprovePayout: async (req, res) => {
+    const { payoutRequestId } = req.params;
+
+    try {
+      const payoutRequest = await PayoutRequest.findById(payoutRequestId);
+
+      if (!payoutRequest) {
+        return res
+          .status(404)
+          .json({ status: false, message: "Payout request not found." });
+      }
+
+      // Check if the payout request is still pending
+      if (payoutRequest.status !== "Pending") {
+        return res.status(400).json({
+          status: false,
+          message:
+            "This payout request has already been processed or approved.",
+        });
+      }
+
+      const payment = await Payment.findOne({
+        restaurantId: payoutRequest.restaurantId,
+      });
+
+      if (!payment) {
+        return res.status(404).json({
+          status: false,
+          message: "No payment records found for this restaurant.",
+        });
+      }
+
+      // Check if the pending withdrawable is enough to fulfill the request
+      if (payment.pending.withdrawable < payoutRequest.amount) {
+        return res.status(400).json({
+          status: false,
+          message: "Insufficient pending funds to approve this payout.",
+        });
+      }
+
+      // Move the amount and commission for this specific request from pending to paid
+      payment.paid.totalOrders += payoutRequest.orderNumber; // Increment totalOrders by the number of orders associated with the payout request
+      payment.paid.withdrawable += payoutRequest.amount;
+      payment.paid.commission += payoutRequest.commissionAmount; // Use commissionAmount from the payout request
+
+      // Reduce the pending values accordingly
+      payment.pending.totalOrders -= payoutRequest.orderNumber; // Decrease totalOrders in pending by the same count
+      payment.pending.withdrawable -= payoutRequest.amount;
+      payment.pending.commission -= payoutRequest.commissionAmount; // Reduce by the specific commission amount
+
+      await payment.save();
+
+      // Update the payout request status to 'Approved'
+      payoutRequest.status = "Approved";
+      await payoutRequest.save();
+
+      // Update payment history entry
+      const paymentHistory = await PaymentHistory.findOne({
+        restaurantId: payoutRequest.restaurantId,
+        amount: payoutRequest.amount,
+        status: "Pending",
+      });
+
+      if (paymentHistory) {
+        paymentHistory.status = "Completed";
+        paymentHistory.completedAt = new Date();
+        await paymentHistory.save();
+      }
+
+      await sendPayoutApprovalEmail(payoutRequest.email);
+
+      res.status(200).json({
+        status: true,
+        message: "Payout request approved successfully",
+        data: payoutRequest,
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while approving payout.",
+        error: error.message,
+      });
+    }
+  },
+
+  updateRestaurantCommission: async (req, res) => {
+    const { restaurantId } = req.params;
+    const { commissionValue } = req.body;
+
+    if (
+      !commissionValue ||
+      isNaN(commissionValue) ||
+      commissionValue < 1 ||
+      commissionValue > 100
+    ) {
+      return res.status(400).json({
+        status: false,
+        message:
+          "Invalid commission value. It must be a number between 1 and 100.",
+      });
+    }
+
+    try {
+      const restaurant = await Restaurant.findById(restaurantId);
+
+      if (!restaurant) {
+        return res.status(404).json({
+          status: false,
+          message: "Restaurant not found.",
+        });
+      }
+
+      // Convert percentage value to decimal
+      const decimalCommission = commissionValue / 100;
+
+      restaurant.restaurantCommission = decimalCommission;
+      await restaurant.save();
+
+      res.status(200).json({
+        status: true,
+        message: "Restaurant commission updated successfully.",
+        data: {
+          restaurantId: restaurant._id,
+          restaurantName: restaurant.title,
+          restaurantCommission: decimalCommission,
+        },
+      });
+    } catch (error) {
+      console.error("Error updating restaurant commission:", error);
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while updating the commission.",
       });
     }
   },

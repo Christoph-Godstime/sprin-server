@@ -2,7 +2,7 @@ const RiderPayment = require("../models/RiderPayment");
 const RiderPayoutRequest = require("../models/RiderPayoutRequest");
 const RiderPaymentHistory = require("../models/RiderPaymentHistory");
 const RiderBankDetails = require("../models/RiderBankDetails");
-const sendRiderPayoutApprovalEmail = require("../utils/email_riderPayoutApproval");
+
 const generateOtp = require("../utils/otp_generator");
 const sendBankDetailsEmail = require("../utils/email_bankDetails");
 const sendPushNotification = require("../utils/sendPushNotification");

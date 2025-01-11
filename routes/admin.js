@@ -22,7 +22,7 @@ router.post("/ratePerKm", verifyAdmin, AdminContoller.createRatePerKm);
 router.put("/ratePerKm", verifyAdmin, AdminContoller.updateRatePerKm);
 
 router.post(
-  "/payout/approve/:payoutRequestId",
+  "/riderPayout/approve/:payoutRequestId",
   verifyAdmin,
   AdminContoller.approvePayout
 );
@@ -31,6 +31,18 @@ router.get(
   "/payouts/pending",
   verifyAdmin,
   AdminContoller.getPendingPayoutRequests
+);
+
+router.post(
+  "/restaurantPayout/approve/:payoutRequestId",
+  verifyAdmin,
+  AdminContoller.restaurantApprovePayout
+);
+
+router.put(
+  "/update-commission/:restaurantId",
+  verifyAdmin,
+  AdminContoller.updateRestaurantCommission
 );
 
 module.exports = router;

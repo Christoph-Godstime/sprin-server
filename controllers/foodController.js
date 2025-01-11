@@ -85,7 +85,7 @@ module.exports = {
     }
 
     try {
-      // First, try to find food items from the last 2 weeks
+      // First, try to find food items from the last 2 weeks and are available
       let food = await Food.aggregate([
         {
           $geoNear: {
@@ -98,6 +98,7 @@ module.exports = {
         {
           $match: {
             createdAt: { $gte: twoWeeksAgo },
+            isAvailable: true,
           },
         },
         {
@@ -105,7 +106,7 @@ module.exports = {
         },
       ]);
 
-      // If no recent food items found, get other nearby food items
+      // If no recent food items found, get other nearby food items that are available
       if (food.length === 0) {
         food = await Food.aggregate([
           {
@@ -114,6 +115,11 @@ module.exports = {
               distanceField: "distance",
               maxDistance: radius,
               spherical: true,
+            },
+          },
+          {
+            $match: {
+              isAvailable: true,
             },
           },
           {
@@ -152,6 +158,11 @@ module.exports = {
           },
         },
         {
+          $match: {
+            isAvailable: true, // Ensure only available food items are included
+          },
+        },
+        {
           $sample: { size: limit },
         },
       ]);
@@ -179,7 +190,10 @@ module.exports = {
     const restaurantId = req.params.restaurantId;
 
     try {
-      const foods = await Food.find({ restaurant: restaurantId });
+      // Find all foods for the restaurant and sort by isAvailable (true first, false last)
+      const foods = await Food.find({ restaurant: restaurantId }).sort({
+        isAvailable: -1,
+      });
 
       if (!foods || foods.length === 0) {
         return res.status(404).json({
@@ -190,7 +204,11 @@ module.exports = {
 
       res.status(200).json(foods);
     } catch (error) {
-      res.status(500).json(error);
+      res.status(500).json({
+        status: false,
+        message: "Server error",
+        error,
+      });
     }
   },
 

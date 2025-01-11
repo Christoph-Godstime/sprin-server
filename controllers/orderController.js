@@ -6,11 +6,13 @@ const Restaurant = require("../models/Restaurant");
 const Rider = require("../models/Rider");
 const Payment = require("../models/Payment");
 const RiderPayment = require("../models/RiderPayment");
+const CompanyRevenue = require("../models/CompanyRevenue");
 const axios = require("axios");
 const mongoose = require("mongoose");
 const sendPushNotification = require("../utils/sendPushNotification");
 const { getAdminPushTokens } = require("../utils/adminPushTokens");
 const { convertToNigerianTime } = require("../utils/helper");
+const sendFirstOrderThankYouEmail = require("../utils/email_firstOrderMessage");
 
 const generateSecretCode = () => {
   return Math.floor(1000 + Math.random() * 9000).toString();
@@ -19,8 +21,17 @@ const generateSecretCode = () => {
 const processRestaurantPayment = async (order) => {
   const restaurantId = order.restaurantId;
   const orderTotal = order.orderTotal;
-  const withdrawable = orderTotal * 0.85;
-  const commission = orderTotal * 0.15;
+
+  // Fetch the restaurant to get its commission rate
+  const restaurant = await Restaurant.findById(restaurantId);
+
+  if (!restaurant) {
+    throw new Error("Restaurant not found");
+  }
+
+  const commissionRate = restaurant.restaurantCommission || 0.15; // Default to 15% if not set
+  const commission = orderTotal * commissionRate;
+  const withdrawable = orderTotal - commission;
 
   // Find the restaurant's payment record and update unpaid fields
   let payment = await Payment.findOne({ restaurantId });
@@ -39,6 +50,21 @@ const processRestaurantPayment = async (order) => {
   payment.total.commission += commission;
 
   await payment.save();
+
+  // Add commission to CompanyRevenue
+  try {
+    const companyRevenue = await CompanyRevenue.findOne();
+
+    if (companyRevenue) {
+      companyRevenue.balance += commission;
+      companyRevenue.commissions += commission;
+      await companyRevenue.save();
+    } else {
+      console.error("Company revenue record not found");
+    }
+  } catch (error) {
+    console.error("Error updating company revenue:", error.message);
+  }
 };
 
 const processRiderPayment = async (order) => {
@@ -231,7 +257,7 @@ module.exports = {
 
         const updatedOrder = await Order.findById(orderId)
           .select(
-            "userId deliveryAddress orderItems deliveryFee restaurantId orderStatus restaurantCoords recipientCoords paymentStatus orderDate restaurantSecretCode riderSecretCode updatedAt"
+            "userId deliveryAddress orderItems deliveryFee restaurantId orderStatus restaurantCoords recipientCoords paymentStatus orderDate restaurantSecretCode riderSecretCode updatedAt freeDelivery"
           )
           .populate({
             path: "userId",
@@ -255,13 +281,50 @@ module.exports = {
           });
 
         if (referredBy) {
-          // Update the referrer's wallet balance
+          // Update the referrer's wallet balance and send push notification
           const referrer = await User.findById(referredBy);
           if (referrer) {
             referrer.walletBalance += 500;
             await referrer.save();
+
+            const companyRevenue = await CompanyRevenue.findOne();
+            if (companyRevenue) {
+              companyRevenue.referral += 1000;
+              companyRevenue.balance -= 1000;
+              await companyRevenue.save();
+            } else {
+              console.error("Company revenue record not found");
+            }
+
+            if (referrer.expoPushToken) {
+              const fullName = `${referrer.firstName} ${referrer.lastName}`;
+              const message = `${fullName}, your Sprin app referral code has been used by someone! ₦500 has been added to your wallet, bringing your total wallet balance to ₦${referrer.walletBalance}. You can use it to pay for an order at any time.`;
+
+              await sendPushNotification(
+                [referrer.expoPushToken],
+                "Referral Reward 🎉",
+                message
+              );
+            } else {
+              console.error("Referrer's expoPushToken not found.");
+            }
           } else {
             console.error("Referrer not found");
+          }
+        }
+
+        const isFreeDelivery = updatedOrder.freeDelivery;
+
+        // If it's free delivery
+        if (isFreeDelivery) {
+          const companyRevenue = await CompanyRevenue.findOne();
+
+          if (companyRevenue) {
+            companyRevenue.freedelivery += req.body.deliveryFee;
+            companyRevenue.balance -= req.body.deliveryFee; // Subtract delivery fee from balance
+            await companyRevenue.save();
+          } else {
+            console.error("Company revenue record not found");
           }
         }
 
@@ -343,7 +406,7 @@ module.exports = {
 
       const updatedOrder = await Order.findById(orderId)
         .select(
-          "userId deliveryAddress orderItems deliveryFee restaurantId orderStatus restaurantCoords recipientCoords paymentStatus orderDate restaurantSecretCode riderSecretCode updatedAt"
+          "userId deliveryAddress orderItems deliveryFee restaurantId orderStatus restaurantCoords recipientCoords paymentStatus orderDate restaurantSecretCode riderSecretCode updatedAt freeDelivery"
         )
         .populate({
           path: "userId",
@@ -367,13 +430,50 @@ module.exports = {
         });
 
       if (referredBy) {
-        // Update the referrer's wallet balance
+        // Update the referrer's wallet balance and send push notification
         const referrer = await User.findById(referredBy);
         if (referrer) {
           referrer.walletBalance += 500;
           await referrer.save();
+
+          const companyRevenue = await CompanyRevenue.findOne();
+          if (companyRevenue) {
+            companyRevenue.referral += 1000;
+            companyRevenue.balance -= 1000;
+            await companyRevenue.save();
+          } else {
+            console.error("Company revenue record not found");
+          }
+
+          if (referrer.expoPushToken) {
+            const fullName = `${referrer.firstName} ${referrer.lastName}`;
+            const message = `${fullName}, your Sprin app referral code has been used by someone! ₦500 has been added to your wallet, bringing your total wallet balance to ₦${referrer.walletBalance}. You can use it to pay for an order at any time.`;
+
+            await sendPushNotification(
+              [referrer.expoPushToken],
+              "Referral Reward 🎉",
+              message
+            );
+          } else {
+            console.error("Referrer's expoPushToken not found.");
+          }
         } else {
           console.error("Referrer not found");
+        }
+      }
+
+      const isFreeDelivery = updatedOrder.freeDelivery;
+
+      // If it's free delivery
+      if (isFreeDelivery) {
+        const companyRevenue = await CompanyRevenue.findOne();
+
+        if (companyRevenue) {
+          companyRevenue.freedelivery += req.body.deliveryFee;
+          companyRevenue.balance -= req.body.deliveryFee; // Subtract delivery fee from balance
+          await companyRevenue.save();
+        } else {
+          console.error("Company revenue record not found");
         }
       }
 
@@ -442,7 +542,7 @@ module.exports = {
 
   placeOrder: async (req, res) => {
     try {
-      const { restaurantId } = req.body;
+      const { restaurantId, orderItems } = req.body;
 
       // Fetch the restaurant by ID
       const restaurant = await Restaurant.findById(restaurantId);
@@ -452,6 +552,56 @@ module.exports = {
         return res.status(404).json({
           status: false,
           message: "Restaurant not found",
+        });
+      }
+
+      const userAddress = await Address.findOne({
+        userId: req.body.userId,
+        default: true,
+      });
+      if (!userAddress) {
+        return res.status(404).json({
+          status: false,
+          message:
+            "Default delivery address not found. Please set a default delivery address to proceed",
+        });
+      }
+
+      const { latitude: userLat, longitude: userLng } = userAddress;
+      const {
+        coords: [restaurantLat, restaurantLng],
+      } = restaurant;
+
+      // Function to calculate distance in KM using Haversine formula
+      function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371; // Radius of the Earth in KM
+        const dLat = degreesToRadians(lat2 - lat1);
+        const dLon = degreesToRadians(lon2 - lon1);
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(degreesToRadians(lat1)) *
+            Math.cos(degreesToRadians(lat2)) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c; // Distance in KM
+      }
+
+      function degreesToRadians(degrees) {
+        return (degrees * Math.PI) / 180;
+      }
+
+      const distance = calculateDistance(
+        userLat,
+        userLng,
+        restaurantLat,
+        restaurantLng
+      );
+      if (distance > 10) {
+        return res.status(400).json({
+          status: false,
+          message:
+            "The restaurant is too far from your delivery address. Please choose a closer restaurant.",
         });
       }
 
@@ -467,24 +617,71 @@ module.exports = {
         return res.status(400).json({
           status: false,
           message:
-            "Restaurant is currently not accepting orders, Please try again",
+            "Restaurant is currently not accepting orders. Please try again later.",
         });
       }
 
+      // Validate order items
+      if (!orderItems || orderItems.length === 0) {
+        return res.status(400).json({
+          status: false,
+          message: "No items in the order.",
+        });
+      }
+
+      // Check availability of food items
+      const foodIds = orderItems.map((item) => item.foodId);
+      const foods = await Food.find({ _id: { $in: foodIds } });
+
+      const unavailableFoods = foods
+        .filter((food) => !food.isAvailable)
+        .map((food) => food.title);
+
+      if (unavailableFoods.length > 0) {
+        if (orderItems.length === 1) {
+          // Single item order
+          return res.status(400).json({
+            status: false,
+            message: `The item '${unavailableFoods[0]}' is not available at the moment. Please try again later.`,
+          });
+        } else if (unavailableFoods.length === 1) {
+          // Multiple items with one unavailable
+          return res.status(400).json({
+            status: false,
+            message: `The item '${unavailableFoods[0]}' is not available at the moment. Please remove it from your cart to proceed.`,
+          });
+        } else {
+          // Multiple items with multiple unavailable
+          return res.status(400).json({
+            status: false,
+            message: `The following items are not available: ${unavailableFoods.join(
+              ", "
+            )}. Please remove them from your cart to proceed.`,
+          });
+        }
+      }
+
+      // Create order
       const order = new Order({
         ...req.body,
         restaurantSecretCode: generateSecretCode(),
         riderSecretCode: generateSecretCode(),
       });
+
       await order.save();
+
       res.status(201).json({
         status: true,
         message: "Order placed successfully",
         data: order,
       });
     } catch (error) {
-      console.log(error);
-      res.status(500).json(error);
+      console.error(error);
+      res.status(500).json({
+        status: false,
+        message:
+          "An error occurred while placing the order. Please try again later.",
+      });
     }
   },
 
@@ -818,6 +1015,13 @@ module.exports = {
             "Order Update",
             "Your order has been delivered. Thank you for choosing our service! 😎"
           );
+
+          // Check if this is the user's first order
+          const userOrders = await Order.find({ userId });
+          if (userOrders.length === 1) {
+            await sendFirstOrderThankYouEmail(user.email, user.firstName);
+          }
+
           break;
         default:
           break;
