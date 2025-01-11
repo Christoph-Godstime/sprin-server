@@ -52,16 +52,21 @@ const processRestaurantPayment = async (order) => {
 
   await payment.save();
 
-  // Add commission to CompanyRevenue
+  // Add commission to CompanyRevenue using atomic update
   try {
-    const companyRevenue = await CompanyRevenue.findOne();
+    const result = await CompanyRevenue.findOneAndUpdate(
+      {},
+      {
+        $inc: {
+          balance: commission,
+          commissions: commission,
+        },
+      },
+      { new: true, upsert: true } // Ensure document is created if it doesn't exist
+    );
 
-    if (companyRevenue) {
-      companyRevenue.balance += commission;
-      companyRevenue.commissions += commission;
-      await companyRevenue.save();
-    } else {
-      console.error("Company revenue record not found");
+    if (!result) {
+      console.error("Company revenue record not found or created.");
     }
   } catch (error) {
     console.error("Error updating company revenue:", error.message);
@@ -288,14 +293,17 @@ module.exports = {
             referrer.walletBalance += 500;
             await referrer.save();
 
-            const companyRevenue = await CompanyRevenue.findOne();
-            if (companyRevenue) {
-              companyRevenue.referral += 1000;
-              companyRevenue.balance -= 1000;
-              await companyRevenue.save();
-            } else {
-              console.error("Company revenue record not found");
-            }
+            // Atomic update for company revenue
+            await CompanyRevenue.findOneAndUpdate(
+              {},
+              {
+                $inc: {
+                  referral: 1000,
+                  balance: -1000,
+                },
+              },
+              { new: true, upsert: true }
+            );
 
             if (referrer.expoPushToken) {
               const fullName = `${referrer.firstName} ${referrer.lastName}`;
@@ -318,15 +326,17 @@ module.exports = {
 
         // If it's free delivery
         if (isFreeDelivery) {
-          const companyRevenue = await CompanyRevenue.findOne();
-
-          if (companyRevenue) {
-            companyRevenue.freedelivery += req.body.deliveryFee;
-            companyRevenue.balance -= req.body.deliveryFee; // Subtract delivery fee from balance
-            await companyRevenue.save();
-          } else {
-            console.error("Company revenue record not found");
-          }
+          // Atomic update for company revenue
+          await CompanyRevenue.findOneAndUpdate(
+            {},
+            {
+              $inc: {
+                freedelivery: req.body.deliveryFee,
+                balance: -req.body.deliveryFee,
+              },
+            },
+            { new: true, upsert: true }
+          );
         }
 
         const restaurantOwnerPushToken =
@@ -437,14 +447,17 @@ module.exports = {
           referrer.walletBalance += 500;
           await referrer.save();
 
-          const companyRevenue = await CompanyRevenue.findOne();
-          if (companyRevenue) {
-            companyRevenue.referral += 1000;
-            companyRevenue.balance -= 1000;
-            await companyRevenue.save();
-          } else {
-            console.error("Company revenue record not found");
-          }
+          // Atomic update for company revenue
+          await CompanyRevenue.findOneAndUpdate(
+            {},
+            {
+              $inc: {
+                referral: 1000,
+                balance: -1000,
+              },
+            },
+            { new: true, upsert: true }
+          );
 
           if (referrer.expoPushToken) {
             const fullName = `${referrer.firstName} ${referrer.lastName}`;
@@ -467,15 +480,17 @@ module.exports = {
 
       // If it's free delivery
       if (isFreeDelivery) {
-        const companyRevenue = await CompanyRevenue.findOne();
-
-        if (companyRevenue) {
-          companyRevenue.freedelivery += req.body.deliveryFee;
-          companyRevenue.balance -= req.body.deliveryFee; // Subtract delivery fee from balance
-          await companyRevenue.save();
-        } else {
-          console.error("Company revenue record not found");
-        }
+        // Atomic update for company revenue
+        await CompanyRevenue.findOneAndUpdate(
+          {},
+          {
+            $inc: {
+              freedelivery: req.body.deliveryFee,
+              balance: -req.body.deliveryFee,
+            },
+          },
+          { new: true, upsert: true }
+        );
       }
 
       const restaurantOwnerPushToken =
