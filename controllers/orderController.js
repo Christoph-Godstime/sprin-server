@@ -148,7 +148,7 @@ module.exports = {
       // );
 
       const riderDeliveryFee = roundToNearestTen(
-        parseFloat(discountedDeliveryFee.toFixed(2))
+        parseFloat((roundedDeliveryFee * 0.85).toFixed(2))
       );
 
       // Validate promo code if provided
