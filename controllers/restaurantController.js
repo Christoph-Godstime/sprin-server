@@ -82,7 +82,7 @@ module.exports = {
     const latitude = parseFloat(req.query.lat);
     const longitude = parseFloat(req.query.lng);
     const radius = 10000; // 10 km radius
-    const limit = 30; // Number of restaurants to return
+    const limit = 100; // Number of restaurants to return
 
     if (!latitude || !longitude) {
       return res
@@ -101,7 +101,18 @@ module.exports = {
           },
         },
         {
-          $sample: { size: limit }, // Randomly select documents
+          $addFields: {
+            randomSort: { $rand: {} }, // Add a random value for sorting
+          },
+        },
+        {
+          $sort: {
+            isActive: -1, // Sort by isActive (true first)
+            randomSort: 1, // Randomize within each group
+          },
+        },
+        {
+          $limit: limit, // Limit the number of restaurants returned
         },
       ]);
 

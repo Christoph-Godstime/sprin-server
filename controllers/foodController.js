@@ -73,7 +73,7 @@ module.exports = {
     const latitude = parseFloat(req.query.lat);
     const longitude = parseFloat(req.query.lng);
     const radius = 10000; // Radius in meters
-    const limit = 30;
+    const limit = 100;
     const twoWeeksAgo = new Date();
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
 
@@ -138,7 +138,7 @@ module.exports = {
   getFoodNearbyWithDynamicRadius: async (req, res) => {
     const latitude = parseFloat(req.query.lat);
     const longitude = parseFloat(req.query.lng);
-    const limit = 30;
+    const limit = 100;
 
     if (!latitude || !longitude) {
       return res.status(400).json({
