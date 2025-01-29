@@ -30,11 +30,22 @@ const verifyTokenAndAuthorization = (req, res, next) => {
       req.user.userType === "Client" ||
       req.user.userType === "Rider" ||
       req.user.userType === "Vendor" ||
+      req.user.userType === "Store" ||
       req.user.userType === "Admin"
     ) {
       next();
     } else {
       res.status(403).json("You are restricted from perfoming this operation");
+    }
+  });
+};
+
+const verifyStore = (req, res, next) => {
+  verifyToken(req, res, () => {
+    if (req.user.userType === "Store" || req.user.userType === "Admin") {
+      next();
+    } else {
+      res.status(403).json("You have limited access");
     }
   });
 };
@@ -73,6 +84,7 @@ module.exports = {
   verifyToken,
   verifyTokenAndAuthorization,
   verifyVendor,
+  verifyStore,
   verifyRider,
   verifyAdmin,
 };
