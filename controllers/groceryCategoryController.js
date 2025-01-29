@@ -1,0 +1,378 @@
+const GroceryCategory = require("../models/GroceryCategory");
+
+module.exports = {
+  // Create a new grocery category
+  createGroceryCategory: async (req, res) => {
+    const { title, value, imageUrl, subCategories } = req.body;
+
+    try {
+      const existingCategory = await GroceryCategory.findOne({
+        $or: [{ title }, { value }],
+      });
+
+      if (existingCategory) {
+        return res.status(400).json({
+          status: false,
+          message:
+            "Grocery category with the same title or value already exists",
+        });
+      }
+
+      const newCategory = new GroceryCategory({
+        title,
+        value,
+        imageUrl,
+        subCategories: subCategories || [], // Optional subcategories
+      });
+      await newCategory.save();
+
+      res.status(201).json({
+        status: true,
+        message: "Grocery category successfully created",
+        data: newCategory,
+      });
+    } catch (error) {
+      console.error("Error creating grocery category:", error);
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while creating the grocery category",
+      });
+    }
+  },
+
+  // Add a subcategory to an existing grocery category
+  addSubCategory: async (req, res) => {
+    const { id } = req.params; // Grocery category ID
+    const { title, value, imageUrl } = req.body;
+
+    try {
+      const groceryCategory = await GroceryCategory.findById(id);
+
+      if (!groceryCategory) {
+        return res.status(404).json({
+          status: false,
+          message: "Grocery category not found",
+        });
+      }
+
+      // Check for duplicate subcategory
+      const existingSubCategory = groceryCategory.subCategories.find(
+        (sub) => sub.title === title || sub.value === value
+      );
+
+      if (existingSubCategory) {
+        return res.status(400).json({
+          status: false,
+          message: "Subcategory with the same title or value already exists",
+        });
+      }
+
+      // Add the new subcategory
+      groceryCategory.subCategories.push({ title, value, imageUrl });
+      await groceryCategory.save();
+
+      res.status(201).json({
+        status: true,
+        message: "Subcategory successfully added",
+        data: groceryCategory,
+      });
+    } catch (error) {
+      console.error("Error adding subcategory:", error);
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while adding the subcategory",
+      });
+    }
+  },
+
+  updateGroceryCategory: async (req, res) => {
+    const id = req.params.id;
+    const { title, value, imageUrl } = req.body;
+
+    try {
+      const updatedCategory = await GroceryCategory.findByIdAndUpdate(
+        id,
+        { title, value, imageUrl },
+        { new: true }
+      );
+
+      if (!updatedCategory) {
+        return res
+          .status(404)
+          .json({ status: false, message: "Grocery category not found." });
+      }
+
+      res.status(200).json({
+        status: true,
+        message: "Grocery category successfully updated",
+        data: updatedCategory,
+      });
+    } catch (error) {
+      console.error("Error updating grocery category:", error);
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while updating the grocery category.",
+      });
+    }
+  },
+
+  // Update an existing subcategory
+  updateSubCategory: async (req, res) => {
+    const { id, subCategoryId } = req.params; // Grocery category ID and subcategory ID
+    const { title, value, imageUrl } = req.body;
+
+    try {
+      const groceryCategory = await GroceryCategory.findById(id);
+
+      if (!groceryCategory) {
+        return res.status(404).json({
+          status: false,
+          message: "Grocery category not found",
+        });
+      }
+
+      // Find and update the subcategory
+      const subCategory = groceryCategory.subCategories.id(subCategoryId);
+
+      if (!subCategory) {
+        return res.status(404).json({
+          status: false,
+          message: "Subcategory not found",
+        });
+      }
+
+      subCategory.title = title || subCategory.title;
+      subCategory.value = value || subCategory.value;
+      subCategory.imageUrl = imageUrl || subCategory.imageUrl;
+
+      await groceryCategory.save();
+
+      res.status(200).json({
+        status: true,
+        message: "Subcategory successfully updated",
+        data: groceryCategory,
+      });
+    } catch (error) {
+      console.error("Error updating subcategory:", error);
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while updating the subcategory",
+      });
+    }
+  },
+
+  // Delete a subcategory
+  deleteSubCategory: async (req, res) => {
+    const { id, subCategoryId } = req.params; // Grocery category ID and subcategory ID
+
+    try {
+      const groceryCategory = await GroceryCategory.findById(id);
+
+      if (!groceryCategory) {
+        return res.status(404).json({
+          status: false,
+          message: "Grocery category not found",
+        });
+      }
+
+      // Find and remove the subcategory
+      const subCategory = groceryCategory.subCategories.id(subCategoryId);
+
+      if (!subCategory) {
+        return res.status(404).json({
+          status: false,
+          message: "Subcategory not found",
+        });
+      }
+
+      subCategory.remove();
+      await groceryCategory.save();
+
+      res.status(200).json({
+        status: true,
+        message: "Subcategory successfully deleted",
+        data: groceryCategory,
+      });
+    } catch (error) {
+      console.error("Error deleting subcategory:", error);
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while deleting the subcategory",
+      });
+    }
+  },
+
+  deleteGroceryCategory: async (req, res) => {
+    const id = req.params.id;
+
+    try {
+      const deletedCategory = await GroceryCategory.findByIdAndRemove(id);
+
+      if (!deletedCategory) {
+        return res
+          .status(404)
+          .json({ status: false, message: "Grocery category not found." });
+      }
+
+      res.status(200).json({
+        status: true,
+        message: "Grocery category successfully deleted",
+      });
+    } catch (error) {
+      console.error("Error deleting grocery category:", error);
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while deleting the grocery category.",
+      });
+    }
+  },
+
+  getAllGroceryCategories: async (req, res) => {
+    try {
+      const categories = await GroceryCategory.find({}, { __v: 0 });
+
+      // Shuffle the categories array
+      const shuffledCategories = categories.sort(() => Math.random() - 0.5);
+
+      res.status(200).json(shuffledCategories);
+    } catch (error) {
+      console.error("Error fetching grocery categories:", error);
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while fetching the grocery categories.",
+      });
+    }
+  },
+
+  patchGroceryCategoryImage: async (req, res) => {
+    const id = req.params.id;
+    const { imageUrl } = req.body;
+
+    try {
+      const updatedCategory = await GroceryCategory.findByIdAndUpdate(
+        id,
+        { imageUrl },
+        { new: true }
+      );
+
+      if (!updatedCategory) {
+        return res
+          .status(404)
+          .json({ status: false, message: "Grocery category not found." });
+      }
+
+      res.status(200).json({
+        status: true,
+        message: "Grocery category image successfully patched",
+        data: updatedCategory,
+      });
+    } catch (error) {
+      console.error("Error patching grocery category image:", error);
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while patching the grocery category image.",
+      });
+    }
+  },
+
+  getAllCategoriesWithRandomGroceries: async (req, res) => {
+    try {
+      // Fetch all categories
+      const categories = await GroceryCategory.find(
+        {},
+        { title: 1, value: 1, imageUrl: 1 }
+      );
+
+      // Fetch 10 random grocery items for each category
+      const categoriesWithGroceries = await Promise.all(
+        categories.map(async (category) => {
+          const groceries = await Grocery.aggregate([
+            { $match: { category: category._id, isAvailable: true } }, // Filter by category and availability
+            { $sample: { size: 10 } }, // Get 10 random grocery items
+            {
+              $project: {
+                title: 1,
+                price: 1,
+                quantity: 1,
+                imageUrl: 1,
+                groceryStore: 1,
+              },
+            },
+          ]);
+
+          return { ...category.toObject(), groceries };
+        })
+      );
+
+      res.status(200).json({
+        status: true,
+        message:
+          "All categories with random grocery items retrieved successfully",
+        data: categoriesWithGroceries,
+      });
+    } catch (error) {
+      console.error("Error fetching categories with groceries:", error.message);
+      res.status(500).json({ status: false, message: error.message });
+    }
+  },
+
+  getCategoryWithGroceries: async (req, res) => {
+    const { id } = req.params; // Category ID
+
+    try {
+      // Find the category by ID
+      const category = await GroceryCategory.findById(id);
+
+      if (!category) {
+        return res
+          .status(404)
+          .json({ status: false, message: "Category not found" });
+      }
+
+      // Fetch groceries grouped by subcategory
+      const groceries = await Grocery.aggregate([
+        { $match: { category: category._id } },
+        {
+          $group: {
+            _id: "$subCategory",
+            items: {
+              $push: {
+                _id: "$_id",
+                title: "$title",
+                price: "$price",
+                quantity: "$quantity",
+                imageUrl: "$imageUrl",
+                groceryStore: "$groceryStore",
+                isAvailable: "$isAvailable",
+              },
+            },
+          },
+        },
+      ]);
+
+      // Format the response
+      const formattedData = {
+        _id: category._id,
+        title: category.title,
+        value: category.value,
+        imageUrl: category.imageUrl,
+        subCategories: category.subCategories.map((sub) => ({
+          _id: sub._id,
+          title: sub.title,
+          value: sub.value,
+          imageUrl: sub.imageUrl,
+          groceries: groceries.find((g) => g._id === sub.value)?.items || [],
+        })),
+      };
+
+      res.status(200).json({
+        status: true,
+        message: "Category retrieved successfully",
+        data: formattedData,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ status: false, message: "Server error", error });
+    }
+  },
+};
