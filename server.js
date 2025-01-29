@@ -42,6 +42,8 @@ const bankDetails = require("./routes/bankDetails");
 const riderPaymentRoute = require("./routes/riderPayment");
 const riderBankDetails = require("./routes/riderBankDetails");
 const rider = require("./routes/rider");
+const groceryCategory = require("./routes/groceryCategory");
+const groceryStore = require("./routes/groceryStore");
 const { fireBaseConnection } = require("./utils/fbConnect");
 const dataBaseConnection = require("./utils/mongoConn");
 
@@ -139,6 +141,8 @@ app.use("/", authRoute);
 app.use("/api/users", userRoute);
 app.use("/api/restaurant", restRoute);
 app.use("/api/category", catRoute);
+app.use("/api/grocery-category", groceryCategory);
+app.use("/api/grocery-store", groceryStore);
 app.use("/api/foods", foodRoute);
 app.use("/api/cart", cartRoute);
 app.use("/api/address", addressRoute);
