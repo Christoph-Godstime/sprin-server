@@ -21,7 +21,7 @@ const UserSchema = new mongoose.Schema(
       type: String,
       required: true,
       default: "Client",
-      enum: ["Admin", "Rider", "Vendor", "Client"],
+      enum: ["Admin", "Rider", "Vendor", "Client", "Store"],
     },
     profile: {
       type: String,
