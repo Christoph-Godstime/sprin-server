@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const Restaurant = require("../models/Restaurant");
 const Rider = require("../models/Rider");
+const GroceryStore = require("../models/GroceryStore");
 const CryptoJS = require("crypto-js");
 const jwt = require("jsonwebtoken");
 const admin = require("firebase-admin");
@@ -136,6 +137,7 @@ module.exports = {
 
       let restaurant;
       let rider;
+      let store;
 
       if (user.userType === "Vendor") {
         restaurant = await Restaurant.findOne({ owner: user.id }).select({
@@ -147,6 +149,19 @@ module.exports = {
           return res
             .status(404)
             .json({ status: false, message: "Restaurant not found" });
+        }
+      }
+
+      if (user.userType === "Store") {
+        store = await GroceryStore.findOne({ owner: user.id }).select({
+          coords: 1,
+        });
+        console.log("this is store: ", store);
+
+        if (!store) {
+          return res
+            .status(404)
+            .json({ status: false, message: "Grocery Store not found" });
         }
       }
 
@@ -195,6 +210,13 @@ module.exports = {
           userToken,
           latitude: restaurant.coords.latitude,
           longitude: restaurant.coords.longitude,
+        });
+      } else if (user.userType === "Store") {
+        res.status(200).json({
+          ...others,
+          userToken,
+          latitude: store.coords.latitude,
+          longitude: store.coords.longitude,
         });
       } else if (user.userType === "Rider") {
         res.status(200).json({
