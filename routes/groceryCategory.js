@@ -44,6 +44,16 @@ router.get(
 );
 
 router.get(
+  "/get-store-categories",
+  groceryCategoryController.getStoreGroceryCategories
+);
+
+router.get(
+  "/:categoryId/subcategories",
+  groceryCategoryController.getSubcategoriesByCategoryId
+);
+
+router.get(
   "/allSubCategoriesItems/:id",
   groceryCategoryController.getCategoryWithGroceries
 );

@@ -244,6 +244,48 @@ module.exports = {
     }
   },
 
+  getStoreGroceryCategories: async (req, res) => {
+    try {
+      const categories = await GroceryCategory.find({}, { __v: 0 }).sort({
+        title: 1,
+      }); // Sort by title in ascending order (A-Z)
+      res.status(200).json(categories);
+    } catch (error) {
+      console.error("Error fetching grocery categories:", error);
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while fetching the grocery categories.",
+      });
+    }
+  },
+
+  getSubcategoriesByCategoryId: async (req, res) => {
+    try {
+      const { categoryId } = req.params;
+
+      const category = await GroceryCategory.findById(categoryId);
+      if (!category) {
+        return res.status(404).json({
+          status: false,
+          message: "Category not found.",
+        });
+      }
+
+      // Sort subcategories by title in ascending order (A-Z)
+      const sortedSubcategories = category.subCategories.sort((a, b) =>
+        a.title.localeCompare(b.title)
+      );
+
+      res.status(200).json(sortedSubcategories);
+    } catch (error) {
+      console.error("Error fetching subcategories:", error);
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while fetching the subcategories.",
+      });
+    }
+  },
+
   patchGroceryCategoryImage: async (req, res) => {
     const id = req.params.id;
     const { imageUrl } = req.body;
