@@ -276,12 +276,22 @@ module.exports = {
         a.title.localeCompare(b.title)
       );
 
-      res.status(200).json(sortedSubcategories);
+      // Include category details along with subcategories
+      const response = {
+        category: {
+          title: category.title,
+          value: category.value,
+          imageUrl: category.imageUrl,
+        },
+        subcategories: sortedSubcategories,
+      };
+
+      res.status(200).json(response);
     } catch (error) {
       console.error("Error fetching subcategories:", error);
       res.status(500).json({
         status: false,
-        message: "An error occurred while fetching the subcategories.",
+        message: error,
       });
     }
   },
