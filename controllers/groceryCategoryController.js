@@ -55,9 +55,11 @@ module.exports = {
         });
       }
 
-      // Check for duplicate subcategory
+      // Check for duplicate subcategory with case-insensitive comparison
       const existingSubCategory = groceryCategory.subCategories.find(
-        (sub) => sub.title === title || sub.value === value
+        (sub) =>
+          sub.title.toLowerCase() === title.toLowerCase() ||
+          sub.value.toLowerCase() === value.toLowerCase()
       );
 
       if (existingSubCategory) {
@@ -292,6 +294,43 @@ module.exports = {
       res.status(500).json({
         status: false,
         message: error,
+      });
+    }
+  },
+
+  getSubcategoryById: async (req, res) => {
+    try {
+      const { categoryId, subcategoryId } = req.params;
+
+      // Find the category by ID
+      const category = await GroceryCategory.findById(categoryId);
+      if (!category) {
+        return res.status(404).json({
+          status: false,
+          message: "Category not found.",
+        });
+      }
+
+      // Find the subcategory by its ID within the subCategories array
+      const subcategory = category.subCategories.id(subcategoryId);
+      if (!subcategory) {
+        return res.status(404).json({
+          status: false,
+          message: "Subcategory not found.",
+        });
+      }
+
+      // Respond with the subcategory details
+      res.status(200).json({
+        status: true,
+        message: "Subcategory found",
+        data: subcategory,
+      });
+    } catch (error) {
+      console.error("Error fetching subcategory:", error);
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while fetching the subcategory.",
       });
     }
   },
