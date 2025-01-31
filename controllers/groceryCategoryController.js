@@ -35,7 +35,7 @@ module.exports = {
       console.error("Error creating grocery category:", error);
       res.status(500).json({
         status: false,
-        message: "An error occurred while creating the grocery category",
+        message: error,
       });
     }
   },
