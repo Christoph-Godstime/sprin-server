@@ -261,6 +261,7 @@ module.exports = {
     try {
       const { categoryId } = req.params;
 
+      // Find the category by ID
       const category = await GroceryCategory.findById(categoryId);
       if (!category) {
         return res.status(404).json({
@@ -269,10 +270,10 @@ module.exports = {
         });
       }
 
-      // Sort subcategories by title in ascending order (A-Z)
-      const sortedSubcategories = category.subCategories.sort((a, b) =>
-        a.title.localeCompare(b.title)
-      );
+      // Fetch all subcategories for this category
+      const subcategories = await SubCategory.find({
+        categoryId: category._id,
+      }).sort({ title: 1 });
 
       // Include category details along with subcategories
       const response = {
@@ -281,7 +282,7 @@ module.exports = {
           value: category.value,
           imageUrl: category.imageUrl,
         },
-        subcategories: sortedSubcategories,
+        subcategories,
       };
 
       res.status(200).json(response);
@@ -289,7 +290,7 @@ module.exports = {
       console.error("Error fetching subcategories:", error);
       res.status(500).json({
         status: false,
-        message: error,
+        message: "An error occurred while fetching the subcategories.",
       });
     }
   },
@@ -307,8 +308,11 @@ module.exports = {
         });
       }
 
-      // Find the subcategory by its ID within the subCategories array
-      const subcategory = category.subCategories.id(subcategoryId);
+      // Find the subcategory by its ID within the subCategories collection
+      const subcategory = await SubCategory.findOne({
+        categoryId: category._id,
+        _id: subcategoryId,
+      });
       if (!subcategory) {
         return res.status(404).json({
           status: false,
@@ -416,6 +420,11 @@ module.exports = {
           .json({ status: false, message: "Category not found" });
       }
 
+      // Fetch subcategories
+      const subcategories = await SubCategory.find({
+        categoryId: category._id,
+      });
+
       // Fetch groceries grouped by subcategory
       const groceries = await Grocery.aggregate([
         { $match: { category: category._id } },
@@ -437,18 +446,20 @@ module.exports = {
         },
       ]);
 
-      // Format the response
+      // Format the response with subcategories and their corresponding groceries
       const formattedData = {
         _id: category._id,
         title: category.title,
         value: category.value,
         imageUrl: category.imageUrl,
-        subCategories: category.subCategories.map((sub) => ({
+        subCategories: subcategories.map((sub) => ({
           _id: sub._id,
           title: sub.title,
           value: sub.value,
           imageUrl: sub.imageUrl,
-          groceries: groceries.find((g) => g._id === sub.value)?.items || [],
+          groceries:
+            groceries.find((g) => g._id.toString() === sub._id.toString())
+              ?.items || [],
         })),
       };
 
