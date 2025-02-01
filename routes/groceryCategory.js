@@ -23,7 +23,7 @@ router.patch(
 
 // Subcategory routes
 router.post(
-  "/:id/subcategories",
+  "/:categoryId/subcategories",
   verifyStore,
   groceryCategoryController.addSubCategory
 ); // Add a subcategory
