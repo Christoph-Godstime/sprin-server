@@ -1,9 +1,10 @@
 const GroceryCategory = require("../models/GroceryCategory");
+const SubCategory = require("../models/SubCategory");
 
 module.exports = {
   // Create a new grocery category
   createGroceryCategory: async (req, res) => {
-    const { title, value, imageUrl, subCategories } = req.body;
+    const { title, value, imageUrl } = req.body;
 
     try {
       const existingCategory = await GroceryCategory.findOne({
@@ -22,8 +23,8 @@ module.exports = {
         title,
         value,
         imageUrl,
-        subCategories: subCategories || [], // Optional subcategories
       });
+
       await newCategory.save();
 
       res.status(201).json({
@@ -33,62 +34,63 @@ module.exports = {
       });
     } catch (error) {
       console.error("Error creating grocery category:", error);
-      res.status(500).json({
-        status: false,
-        message: error,
-      });
+      res.status(500).json({ status: false, message: "Server error" });
     }
   },
 
   // Add a subcategory to an existing grocery category
   addSubCategory: async (req, res) => {
-    const { id } = req.params; // Grocery category ID
+    const { categoryId } = req.params;
     const { title, value, imageUrl } = req.body;
 
     try {
-      const groceryCategory = await GroceryCategory.findById(id);
-
-      if (!groceryCategory) {
-        return res.status(404).json({
-          status: false,
-          message: "Grocery category not found",
-        });
+      const category = await GroceryCategory.findById(categoryId);
+      if (!category) {
+        return res
+          .status(404)
+          .json({ status: false, message: "Grocery category not found" });
       }
 
-      // Check for duplicate subcategory with case-insensitive comparison
-      const existingSubCategory = groceryCategory.subCategories.find(
-        (sub) =>
-          sub.title.toLowerCase() === title.toLowerCase() ||
-          sub.value.toLowerCase() === value.toLowerCase()
-      );
+      const existingSubCategory = await SubCategory.findOne({ categoryId });
 
       if (existingSubCategory) {
-        return res.status(400).json({
-          status: false,
-          message: "Subcategory with the same title or value already exists",
+        const isDuplicate = await SubCategory.findOne({
+          categoryId,
+          $or: [
+            { title: { $regex: `^${title}$`, $options: "i" } }, // Case-insensitive check for title
+            { value: { $regex: `^${value}$`, $options: "i" } }, // Case-insensitive check for value
+          ],
         });
+
+        if (isDuplicate) {
+          return res.status(400).json({
+            status: false,
+            message: "Subcategory with the same title or value already exists",
+          });
+        }
       }
 
-      // Add the new subcategory
-      groceryCategory.subCategories.push({ title, value, imageUrl });
-      await groceryCategory.save();
+      const newSubCategory = new SubCategory({
+        title,
+        value,
+        imageUrl,
+        categoryId,
+      });
+      await newSubCategory.save();
 
       res.status(201).json({
         status: true,
         message: "Subcategory successfully added",
-        data: groceryCategory,
+        data: newSubCategory,
       });
     } catch (error) {
       console.error("Error adding subcategory:", error);
-      res.status(500).json({
-        status: false,
-        message: "An error occurred while adding the subcategory",
-      });
+      res.status(500).json({ status: false, message: "Server error" });
     }
   },
 
   updateGroceryCategory: async (req, res) => {
-    const id = req.params.id;
+    const { id } = req.params;
     const { title, value, imageUrl } = req.body;
 
     try {
@@ -101,65 +103,63 @@ module.exports = {
       if (!updatedCategory) {
         return res
           .status(404)
-          .json({ status: false, message: "Grocery category not found." });
+          .json({ status: false, message: "Grocery category not found" });
       }
 
       res.status(200).json({
         status: true,
-        message: "Grocery category successfully updated",
+        message: "Category updated",
         data: updatedCategory,
       });
     } catch (error) {
-      console.error("Error updating grocery category:", error);
-      res.status(500).json({
-        status: false,
-        message: "An error occurred while updating the grocery category.",
-      });
+      console.error("Error updating category:", error);
+      res.status(500).json({ status: false, message: "Server error" });
     }
   },
 
   // Update an existing subcategory
   updateSubCategory: async (req, res) => {
-    const { id, subCategoryId } = req.params; // Grocery category ID and subcategory ID
+    const { subCategoryId } = req.params;
     const { title, value, imageUrl } = req.body;
 
     try {
-      const groceryCategory = await GroceryCategory.findById(id);
+      const existingSubCategory = await SubCategory.findById(subCategoryId);
+      if (!existingSubCategory) {
+        return res
+          .status(404)
+          .json({ status: false, message: "Subcategory not found" });
+      }
 
-      if (!groceryCategory) {
-        return res.status(404).json({
+      const isDuplicate = await SubCategory.findOne({
+        categoryId: existingSubCategory.categoryId,
+        _id: { $ne: subCategoryId }, // Exclude the current subcategory
+        $or: [
+          { title: { $regex: `^${title}$`, $options: "i" } },
+          { value: { $regex: `^${value}$`, $options: "i" } },
+        ],
+      });
+
+      if (isDuplicate) {
+        return res.status(400).json({
           status: false,
-          message: "Grocery category not found",
+          message: "Subcategory with the same title or value already exists",
         });
       }
 
-      // Find and update the subcategory
-      const subCategory = groceryCategory.subCategories.id(subCategoryId);
-
-      if (!subCategory) {
-        return res.status(404).json({
-          status: false,
-          message: "Subcategory not found",
-        });
-      }
-
-      subCategory.title = title || subCategory.title;
-      subCategory.value = value || subCategory.value;
-      subCategory.imageUrl = imageUrl || subCategory.imageUrl;
-
-      await groceryCategory.save();
+      const updatedSubCategory = await SubCategory.findByIdAndUpdate(
+        subCategoryId,
+        { title, value, imageUrl },
+        { new: true }
+      );
 
       res.status(200).json({
         status: true,
-        message: "Subcategory successfully updated",
-        data: groceryCategory,
+        message: "Subcategory updated",
+        data: updatedSubCategory,
       });
     } catch (error) {
       console.error("Error updating subcategory:", error);
-      res.status(500).json({
-        status: false,
-        message: "An error occurred while updating the subcategory",
-      });
+      res.status(500).json({ status: false, message: "Server error" });
     }
   },
 
@@ -205,27 +205,23 @@ module.exports = {
   },
 
   deleteGroceryCategory: async (req, res) => {
-    const id = req.params.id;
+    const { id } = req.params;
 
     try {
-      const deletedCategory = await GroceryCategory.findByIdAndRemove(id);
-
+      const deletedCategory = await GroceryCategory.findByIdAndDelete(id);
       if (!deletedCategory) {
         return res
           .status(404)
-          .json({ status: false, message: "Grocery category not found." });
+          .json({ status: false, message: "Grocery category not found" });
       }
 
-      res.status(200).json({
-        status: true,
-        message: "Grocery category successfully deleted",
-      });
+      // Also delete related subcategories
+      await SubCategory.deleteMany({ categoryId: id });
+
+      res.status(200).json({ status: true, message: "Category deleted" });
     } catch (error) {
-      console.error("Error deleting grocery category:", error);
-      res.status(500).json({
-        status: false,
-        message: "An error occurred while deleting the grocery category.",
-      });
+      console.error("Error deleting category:", error);
+      res.status(500).json({ status: false, message: "Server error" });
     }
   },
 

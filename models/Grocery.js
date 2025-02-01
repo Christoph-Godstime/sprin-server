@@ -8,7 +8,11 @@ const grocerySchema = new mongoose.Schema(
       ref: "GroceryCategory",
       required: true,
     },
-    subCategory: { type: String, required: true },
+    subCategory: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SubCategory",
+      required: true,
+    },
     groceryStore: { type: mongoose.Schema.Types.ObjectId, ref: "GroceryStore" },
     price: { type: Number, required: true },
     quantity: { type: String, required: true }, // e.g., "1.5L", "500g"
