@@ -15,7 +15,7 @@ const grocerySchema = new mongoose.Schema(
     },
     groceryStore: { type: mongoose.Schema.Types.ObjectId, ref: "GroceryStore" },
     price: { type: Number, required: true },
-    quantity: { type: String, required: true }, // e.g., "1.5L", "500g"
+    quantity: { type: String }, // e.g., "1.5L", "500g"
     isAvailable: { type: Boolean, default: true },
     imageUrl: { type: Array, required: true },
     location: {

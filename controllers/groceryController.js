@@ -4,7 +4,7 @@ const Grocery = require("../models/Grocery");
 module.exports = {
   addGroceryItem: async (req, res) => {
     try {
-      const { groceryStore } = req.body;
+      const { title, quantity, groceryStore } = req.body;
 
       // Ensure the grocery store exists
       const storeExists = await GroceryStore.findById(groceryStore);
@@ -12,6 +12,23 @@ module.exports = {
         return res
           .status(404)
           .json({ status: false, message: "Grocery store not found" });
+      }
+
+      // Check for an existing grocery item (Case-Insensitive Title Check)
+      const existingGrocery = await Grocery.findOne({
+        title: { $regex: new RegExp(`^${title}$`, "i") }, // Case-insensitive regex match
+        quantity,
+        groceryStore,
+      });
+
+      if (existingGrocery) {
+        return res
+          .status(400)
+          .json({
+            status: false,
+            message:
+              "Grocery item with the same title and quantity already exists in this store",
+          });
       }
 
       // Create new grocery item
