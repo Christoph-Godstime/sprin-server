@@ -5,9 +5,6 @@ const { verifyStore } = require("../middlewares/verifyToken");
 // Route to add a new grocery item
 router.post("/", verifyStore, groceryController.addGroceryItem);
 
-// Route to update a grocery item by its ID
-router.put("/:id", verifyStore, groceryController.updateGroceryById);
-
 // Route to toggle the availability of a grocery item by its ID
 router.patch(
   "/:id/toggle-availability",
@@ -20,5 +17,7 @@ router.get(
   verifyStore,
   groceryController.getSubCategoriesAndGroceries
 );
+
+router.put("/update/:id", verifyStore, groceryController.updateGroceryItem);
 
 module.exports = router;

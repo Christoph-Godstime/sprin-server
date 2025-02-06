@@ -44,34 +44,6 @@ module.exports = {
     }
   },
 
-  updateGroceryById: async (req, res) => {
-    const groceryId = req.params.id;
-
-    try {
-      const updatedGrocery = await Grocery.findByIdAndUpdate(
-        groceryId,
-        req.body,
-        {
-          new: true,
-          runValidators: true,
-        }
-      );
-
-      if (!updatedGrocery) {
-        return res
-          .status(404)
-          .json({ status: false, message: "Grocery item not found" });
-      }
-
-      res
-        .status(200)
-        .json({ status: true, message: "Grocery item successfully updated" });
-    } catch (error) {
-      console.error("Error updating grocery item:", error.message);
-      res.status(500).json({ status: false, message: error.message });
-    }
-  },
-
   toggleGroceryAvailability: async (req, res) => {
     const groceryId = req.params.id;
 
@@ -140,6 +112,63 @@ module.exports = {
     } catch (error) {
       console.error("Error fetching subcategories and groceries:", error);
       res.status(500).json({ message: "Server error" });
+    }
+  },
+
+  updateGroceryItem: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { title, quantity, groceryStore, price, imageUrl } = req.body;
+
+      // Check if the grocery item exists
+      const groceryItem = await Grocery.findById(id);
+      if (!groceryItem) {
+        return res
+          .status(404)
+          .json({ status: false, message: "Grocery item not found" });
+      }
+
+      // Ensure the grocery store exists
+      if (groceryStore) {
+        const storeExists = await GroceryStore.findById(groceryStore);
+        if (!storeExists) {
+          return res
+            .status(404)
+            .json({ status: false, message: "Grocery store not found" });
+        }
+      }
+
+      // Check for duplicate title and quantity in the same grocery store (excluding the current item)
+      const existingGrocery = await Grocery.findOne({
+        _id: { $ne: id }, // Exclude the current item
+        title: { $regex: new RegExp(`^${title}$`, "i") }, // Case-insensitive match
+        quantity,
+        groceryStore,
+      });
+
+      if (existingGrocery) {
+        return res.status(400).json({
+          status: false,
+          message:
+            "Another grocery item with the same title and quantity already exists in this store",
+        });
+      }
+
+      // Update the grocery item
+      const updatedGrocery = await Grocery.findByIdAndUpdate(
+        id,
+        { title, quantity, price, imageUrl },
+        { new: true, runValidators: true }
+      );
+
+      res.status(200).json({
+        status: true,
+        message: "Grocery item updated successfully",
+        grocery: updatedGrocery,
+      });
+    } catch (error) {
+      console.error("Error updating grocery item:", error.message);
+      res.status(500).json({ status: false, message: error.message });
     }
   },
 };
