@@ -62,8 +62,14 @@ module.exports = {
       // Fetch groceries grouped by subcategory
       const subCategoryData = await Promise.all(
         subCategories.map(async (subCategory) => {
-          const groceries = await Grocery.find({
-            subCategory: subCategory._id,
+          let groceries = await Grocery.find({ subCategory: subCategory._id });
+
+          // Sort groceries: First by title (alphabetically), then by availability (available first)
+          groceries.sort((a, b) => {
+            if (a.isAvailable === b.isAvailable) {
+              return a.title.localeCompare(b.title); // Alphabetical sorting
+            }
+            return a.isAvailable ? -1 : 1; // Move unavailable groceries to the bottom
           });
 
           return {
