@@ -22,13 +22,11 @@ module.exports = {
       });
 
       if (existingGrocery) {
-        return res
-          .status(400)
-          .json({
-            status: false,
-            message:
-              "Grocery item with the same title and quantity already exists in this store",
-          });
+        return res.status(400).json({
+          status: false,
+          message:
+            "Grocery item with the same title and quantity already exists in this store",
+        });
       }
 
       // Create new grocery item
@@ -99,6 +97,47 @@ module.exports = {
     } catch (error) {
       console.error("Error toggling grocery availability:", error.message);
       res.status(500).json({ status: false, message: error.message });
+    }
+  },
+
+  getSubCategoriesAndGroceries: async (req, res) => {
+    try {
+      const { categoryId } = req.params;
+
+      if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+        return res.status(400).json({ message: "Invalid category ID" });
+      }
+
+      // Find all subcategories under the given category ID
+      const subCategories = await SubCategory.find({ categoryId });
+
+      if (subCategories.length === 0) {
+        return res.status(404).json({ message: "No subcategories found" });
+      }
+
+      // Fetch groceries grouped by subcategory
+      const subCategoryData = await Promise.all(
+        subCategories.map(async (subCategory) => {
+          const groceries = await Grocery.find({
+            subCategory: subCategory._id,
+          });
+
+          return {
+            subCategory: {
+              _id: subCategory._id,
+              title: subCategory.title,
+              value: subCategory.value,
+              imageUrl: subCategory.imageUrl,
+            },
+            groceries,
+          };
+        })
+      );
+
+      res.status(200).json(subCategoryData);
+    } catch (error) {
+      console.error("Error fetching subcategories and groceries:", error);
+      res.status(500).json({ message: "Server error" });
     }
   },
 };

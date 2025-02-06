@@ -15,4 +15,10 @@ router.patch(
   groceryController.toggleGroceryAvailability
 );
 
+router.get(
+  "/subcategories-groceries/:categoryId",
+  verifyStore,
+  groceryController.getSubCategoriesAndGroceries
+);
+
 module.exports = router;
