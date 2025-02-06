@@ -44,36 +44,6 @@ module.exports = {
     }
   },
 
-  toggleGroceryAvailability: async (req, res) => {
-    const groceryId = req.params.id;
-
-    try {
-      // Find the grocery item by its ID
-      const grocery = await Grocery.findById(groceryId);
-
-      if (!grocery) {
-        return res
-          .status(404)
-          .json({ status: false, message: "Grocery item not found" });
-      }
-
-      // Toggle the isAvailable field
-      grocery.isAvailable = !grocery.isAvailable;
-
-      // Save the changes
-      await grocery.save();
-
-      res.status(200).json({
-        status: true,
-        message: "Grocery availability toggled successfully",
-        isAvailable: grocery.isAvailable,
-      });
-    } catch (error) {
-      console.error("Error toggling grocery availability:", error.message);
-      res.status(500).json({ status: false, message: error.message });
-    }
-  },
-
   getSubCategoriesAndGroceries: async (req, res) => {
     try {
       const { categoryId } = req.params;
@@ -118,7 +88,8 @@ module.exports = {
   updateGroceryItem: async (req, res) => {
     try {
       const { id } = req.params;
-      const { title, quantity, groceryStore, price, imageUrl } = req.body;
+      const { title, quantity, groceryStore, price, imageUrl, isAvailable } =
+        req.body;
 
       // Check if the grocery item exists
       const groceryItem = await Grocery.findById(id);
@@ -157,7 +128,7 @@ module.exports = {
       // Update the grocery item
       const updatedGrocery = await Grocery.findByIdAndUpdate(
         id,
-        { title, quantity, price, imageUrl },
+        { title, quantity, price, imageUrl, isAvailable },
         { new: true, runValidators: true }
       );
 
