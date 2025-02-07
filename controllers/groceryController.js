@@ -157,6 +157,8 @@ module.exports = {
   searchGroceries: async (req, res) => {
     const { query, storeId } = req.params; // Get search term and store ID from request parameters
 
+    const storeObjectId = new mongoose.Types.ObjectId(storeId);
+
     if (!storeId) {
       return res
         .status(400)
@@ -178,7 +180,7 @@ module.exports = {
           },
         },
         {
-          $match: { groceryStore: storeId },
+          $match: { groceryStore: storeObjectId },
         },
         {
           $sort: { isAvailable: -1, title: 1 },
@@ -198,9 +200,11 @@ module.exports = {
   userSearchGroceries: async (req, res) => {
     const { query, storeId } = req.params; // Get search term and store ID from request parameters
 
+    const storeObjectId = new mongoose.Types.ObjectId(storeId);
+
     try {
-      const matchStage = storeId
-        ? { groceryStore: storeId } // If storeId is provided, filter groceries by store
+      const matchStage = storeObjectId
+        ? { groceryStore: storeObjectId } // If storeId is provided, filter groceries by store
         : {};
 
       const results = await Grocery.aggregate([
