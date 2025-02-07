@@ -192,4 +192,43 @@ module.exports = {
       res.status(500).json({ error: error.message, status: false });
     }
   },
+
+  userSearchGroceries: async (req, res) => {
+    const { query, storeId } = req.params; // Get search term and store ID from request parameters
+
+    try {
+      const matchStage = storeId
+        ? { groceryStore: storeId } // If storeId is provided, filter groceries by store
+        : {};
+
+      const results = await Grocery.aggregate([
+        {
+          $search: {
+            index: "groceries", // Ensure this matches your MongoDB Atlas Search index
+            text: {
+              query,
+              path: ["title"], // Fields to search in
+              fuzzy: {
+                maxEdits: 1, // Allows minor typos
+              },
+            },
+          },
+        },
+        {
+          $match: matchStage, // Apply store filter if storeId is provided
+        },
+        {
+          $sort: { isAvailable: -1, title: 1 },
+          // Sort by:
+          // 1️⃣ `isAvailable: -1` → Available groceries (true) come first
+          // 2️⃣ `title: 1` → Then sort alphabetically (A-Z)
+        },
+      ]);
+
+      res.status(200).json(results);
+    } catch (error) {
+      console.error("Error searching groceries:", error);
+      res.status(500).json({ error: error.message, status: false });
+    }
+  },
 };
