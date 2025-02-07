@@ -186,10 +186,7 @@ module.exports = {
         },
       ]);
 
-      res.status(200).json({
-        total: results.length, // Return total number of groceries found
-        groceries: results,
-      });
+      res.status(200).json(results);
     } catch (error) {
       console.error("Error searching groceries:", error);
       res.status(500).json({ error: error.message, status: false });
