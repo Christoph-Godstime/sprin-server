@@ -157,11 +157,13 @@ module.exports = {
   searchGroceries: async (req, res) => {
     const { query, storeId } = req.params; // Get search term and store ID from request parameters
 
-    try {
-      const matchStage = storeId
-        ? { groceryStore: storeId } // If storeId is provided, filter groceries by store
-        : {};
+    if (!storeId) {
+      return res
+        .status(400)
+        .json({ error: "Store ID is required", status: false });
+    }
 
+    try {
       const results = await Grocery.aggregate([
         {
           $search: {
@@ -176,7 +178,7 @@ module.exports = {
           },
         },
         {
-          $match: matchStage, // Apply store filter if storeId is provided
+          $match: { groceryStore: storeId },
         },
         {
           $sort: { isAvailable: -1, title: 1 },
