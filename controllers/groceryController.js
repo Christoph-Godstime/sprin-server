@@ -84,6 +84,11 @@ module.exports = {
         })
       );
 
+      // Sort subcategories alphabetically by title
+      subCategoryData.sort((a, b) =>
+        a.subCategory.title.localeCompare(b.subCategory.title)
+      );
+
       res.status(200).json(subCategoryData);
     } catch (error) {
       console.error("Error fetching subcategories and groceries:", error);
@@ -146,6 +151,48 @@ module.exports = {
     } catch (error) {
       console.error("Error updating grocery item:", error.message);
       res.status(500).json({ status: false, message: error.message });
+    }
+  },
+
+  searchGroceries: async (req, res) => {
+    const { query, storeId } = req.params; // Get search term and store ID from request parameters
+
+    try {
+      const matchStage = storeId
+        ? { groceryStore: storeId } // If storeId is provided, filter groceries by store
+        : {};
+
+      const results = await Grocery.aggregate([
+        {
+          $search: {
+            index: "groceries", // Ensure this matches your MongoDB Atlas Search index
+            text: {
+              query,
+              path: ["title"], // Fields to search in
+              fuzzy: {
+                maxEdits: 1, // Allows minor typos
+              },
+            },
+          },
+        },
+        {
+          $match: matchStage, // Apply store filter if storeId is provided
+        },
+        {
+          $sort: { isAvailable: -1, title: 1 },
+          // Sort by:
+          // 1️⃣ `isAvailable: -1` → Available groceries (true) come first
+          // 2️⃣ `title: 1` → Then sort alphabetically (A-Z)
+        },
+      ]);
+
+      res.status(200).json({
+        total: results.length, // Return total number of groceries found
+        groceries: results,
+      });
+    } catch (error) {
+      console.error("Error searching groceries:", error);
+      res.status(500).json({ error: error.message, status: false });
     }
   },
 };

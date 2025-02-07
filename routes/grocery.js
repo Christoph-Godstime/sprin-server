@@ -13,4 +13,10 @@ router.get(
 
 router.put("/update/:id", verifyStore, groceryController.updateGroceryItem);
 
+router.get(
+  "/search/:query/:storeId?",
+  verifyStore,
+  groceryController.searchGroceries
+);
+
 module.exports = router;
