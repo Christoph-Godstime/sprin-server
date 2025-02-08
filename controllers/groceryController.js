@@ -231,7 +231,10 @@ module.exports = {
         },
       ]);
 
-      res.status(200).json(results);
+      res.status(200).json({
+        query,
+        results,
+      });
     } catch (error) {
       console.error("Error searching groceries:", error);
       res.status(500).json({ error: error.message, status: false });
