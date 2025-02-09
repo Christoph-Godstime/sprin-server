@@ -439,6 +439,7 @@ module.exports = {
               path: ["title", "restaurantName", "description"], // Fields to search
               fuzzy: {
                 maxEdits: 1, // Allows for typo tolerance
+                prefixLength: 2, // First two characters must match exactly
               },
             },
           },
