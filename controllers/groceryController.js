@@ -175,6 +175,7 @@ module.exports = {
               path: ["title"], // Fields to search in
               fuzzy: {
                 maxEdits: 1, // Allows minor typos
+                prefixLength: 2, // First two characters must match exactly
               },
             },
           },
@@ -216,6 +217,7 @@ module.exports = {
               path: ["title"], // Fields to search in
               fuzzy: {
                 maxEdits: 1, // Allows minor typos
+                prefixLength: 2, // First two characters must match exactly
               },
             },
           },
