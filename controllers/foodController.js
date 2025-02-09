@@ -444,22 +444,26 @@ module.exports = {
           },
         },
         {
-          $limit: 1000, // Optionally limit the number of results before shuffling
+          $match: { isAvailable: true }, // Only return available foods
         },
         {
-          $addFields: { random: { $rand: {} } }, // Add a field with a random number
+          $limit: 1000, // First limit to 1000 results before shuffling
         },
         {
-          $sort: { random: 1 }, // Sort by the random number to shuffle
+          $addFields: { random: { $rand: {} } }, // Add a random number field
         },
         {
-          $limit: 50, // Limit to 30 documents
+          $sort: { random: 1 }, // Shuffle results randomly
+        },
+        {
+          $limit: 50, // Final limit to 50 results
         },
         {
           $project: { random: 0 }, // Remove the random field from the output
         },
       ]);
-      res.status(200).json(results);
+
+      res.status(200).json({ query: search, results });
     } catch (error) {
       res.status(500).json({ error: error.message, status: false });
     }
