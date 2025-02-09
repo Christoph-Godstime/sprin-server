@@ -5,11 +5,6 @@ const sendPushNotification = require("../utils/sendPushNotification");
 const { getAdminPushTokens } = require("../utils/adminPushTokens");
 const mongoose = require("mongoose");
 
-const adminPushTokens = [
-  "ExponentPushToken[bqYCioJmXpKlXskTpN6PEI]",
-  "ExponentPushToken[czk7m2Ec1nyF3Da3ieTxM1]",
-];
-
 module.exports = {
   addRestaurant: async (req, res) => {
     console.log(req.body);
@@ -101,6 +96,11 @@ module.exports = {
           },
         },
         {
+          $match: {
+            verification: "Verified", // Only return verified restaurants
+          },
+        },
+        {
           $addFields: {
             randomSort: { $rand: {} }, // Add a random value for sorting
           },
@@ -130,7 +130,7 @@ module.exports = {
       // Check if code is provided in the params
       if (req.params.code) {
         randomRestaurants = await Restaurant.aggregate([
-          { $match: { code: req.params.code } },
+          { $match: { code: req.params.code, verification: "Verified" } },
           { $sample: { size: 5 } },
           { $project: { __v: 0 } },
         ]);
@@ -139,6 +139,7 @@ module.exports = {
       // If no code provided in params or no restaurants match the provided code
       if (!randomRestaurants.length) {
         randomRestaurants = await Restaurant.aggregate([
+          { $match: { verification: "Verified" } },
           { $sample: { size: 5 } },
           { $project: { __v: 0 } },
         ]);
@@ -243,7 +244,7 @@ module.exports = {
       if (!restaurant) {
         return res
           .status(404)
-          .json({ status: false, message: "restaurant item not found" });
+          .json({ status: false, message: "restaurant not found" });
       }
 
       res.status(200).json(restaurant);
