@@ -393,8 +393,6 @@ module.exports = {
         {
           $match: {
             verification: "Verified",
-            isAvailable: true,
-            isActive: true,
           },
         },
         {
