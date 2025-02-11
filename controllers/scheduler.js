@@ -1,6 +1,7 @@
 const cron = require("node-cron");
 const orderController = require("../controllers/orderController");
 const Restaurant = require("../models/Restaurant");
+const GroceryStore = require("../models/GroceryStore");
 const Rider = require("../models/Rider");
 const Order = require("../models/Orders");
 
@@ -86,6 +87,49 @@ const updateRestaurantAvailability = async () => {
   }
 };
 
+const updateGroceryStoreAvailability = async () => {
+  try {
+    const stores = await GroceryStore.find();
+
+    const currentTime = new Date();
+    const currentFormattedTime = formatTime(currentTime);
+
+    for (const store of stores) {
+      if (
+        !store.openingTime ||
+        !store.closingTime ||
+        !store.location.coordinates
+      ) {
+        // console.warn(
+        //   `Skipping store with missing required fields: ${store._id}`
+        // );
+        continue;
+      }
+
+      const openingTime = new Date(store.openingTime);
+      const closingTime = new Date(store.closingTime);
+
+      const formattedOpeningTime = formatTime(openingTime);
+      const formattedClosingTime = formatTime(closingTime);
+
+      if (
+        currentFormattedTime >= formattedOpeningTime &&
+        currentFormattedTime <= formattedClosingTime
+      ) {
+        store.isActive = true;
+      } else {
+        store.isActive = false;
+      }
+
+      await store.save();
+    }
+
+    // console.log("Store availability updated successfully");
+  } catch (error) {
+    console.error("Error updating store availability", error);
+  }
+};
+
 const updateRiderAvailability = async () => {
   try {
     const riders = await Rider.find();
@@ -120,4 +164,5 @@ module.exports = {
   reassignUnacceptedOrders,
   updateRestaurantAvailability,
   updateRiderAvailability,
+  updateGroceryStoreAvailability,
 };

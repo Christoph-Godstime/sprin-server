@@ -1,6 +1,7 @@
 const GroceryCategory = require("../models/GroceryCategory");
 const SubCategory = require("../models/SubCategory");
 const Grocery = require("../models/Grocery");
+const GroceryStore = require("../models/GroceryStore");
 
 module.exports = {
   // Create a new grocery category
@@ -369,18 +370,68 @@ module.exports = {
 
   getAllCategoriesWithRandomGroceries: async (req, res) => {
     try {
-      // Fetch all categories and sort alphabetically by title
+      const latitude = parseFloat(req.query.lat);
+      const longitude = parseFloat(req.query.lng);
+      const radius = 10000; // 10 km radius
+
+      if (!latitude || !longitude) {
+        return res
+          .status(400)
+          .json({ message: "Latitude and longitude are required" });
+      }
+
+      // Find the nearest grocery store within the radius
+      const nearestStore = await GroceryStore.aggregate([
+        {
+          $geoNear: {
+            near: { type: "Point", coordinates: [longitude, latitude] },
+            distanceField: "distance",
+            maxDistance: radius,
+            spherical: true,
+          },
+        },
+        {
+          $match: {
+            verification: "Verified",
+            isAvailable: true,
+            isActive: true,
+          },
+        },
+        {
+          $sort: { distance: 1 }, // Sort by closest store
+        },
+        {
+          $limit: 1, // Get only the closest store
+        },
+      ]);
+
+      if (nearestStore.length === 0) {
+        return res
+          .status(404)
+          .json({ message: "No grocery store found within 10km" });
+      }
+
+      const store = nearestStore[0];
+      const storeId = store._id;
+
+      // Fetch all categories
       const categories = await GroceryCategory.find(
         {},
         { title: 1, value: 1, imageUrl: 1 }
-      ).sort({ title: 1 }); // Sort categories alphabetically
+      ).sort({ title: 1 });
 
-      // Fetch 10 random grocery items for each category
+      // Fetch 10 random grocery items for each category from the nearest store
       const categoriesWithGroceries = await Promise.all(
         categories.map(async (category) => {
           const groceries = await Grocery.aggregate([
-            { $match: { category: category._id, isAvailable: true } }, // Filter by category and availability
-            { $sample: { size: 10 } }, // Get 10 random grocery items
+            {
+              $match: {
+                category: category._id,
+                groceryStore: storeId,
+                isAvailable: true,
+              },
+            },
+            { $sample: { size: 10 } },
             {
               $project: {
                 title: 1,
@@ -400,6 +451,7 @@ module.exports = {
         status: true,
         message:
           "All categories with random grocery items retrieved successfully",
+        storeDetails: store, // Include store details in the response
         data: categoriesWithGroceries,
       });
     } catch (error) {
@@ -407,7 +459,6 @@ module.exports = {
       res.status(500).json({ status: false, message: error.message });
     }
   },
-
   getCategoryWithGroceries: async (req, res) => {
     const { id } = req.params; // Category ID
 

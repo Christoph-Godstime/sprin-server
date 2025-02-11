@@ -173,9 +173,11 @@ const {
   reassignUnacceptedOrders,
   updateRestaurantAvailability,
   updateRiderAvailability,
+  updateGroceryStoreAvailability,
 } = require("./controllers/scheduler");
 
 const cron = require("node-cron");
 cron.schedule("* * * * *", reassignUnacceptedOrders(io, userSocketMap));
 cron.schedule("* * * * *", updateRestaurantAvailability);
+cron.schedule("* * * * *", updateGroceryStoreAvailability);
 cron.schedule("* * * * *", updateRiderAvailability);
