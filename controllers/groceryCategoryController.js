@@ -369,11 +369,11 @@ module.exports = {
 
   getAllCategoriesWithRandomGroceries: async (req, res) => {
     try {
-      // Fetch all categories
+      // Fetch all categories and sort alphabetically by title
       const categories = await GroceryCategory.find(
         {},
         { title: 1, value: 1, imageUrl: 1 }
-      );
+      ).sort({ title: 1 }); // Sort categories alphabetically
 
       // Fetch 10 random grocery items for each category
       const categoriesWithGroceries = await Promise.all(
