@@ -19,6 +19,9 @@ router.get(
   groceryController.searchGroceries
 );
 
-router.get("/search/:query/:storeId?", groceryController.userSearchGroceries);
+router.get(
+  "/user-search/:query/:storeId?",
+  groceryController.userSearchGroceries
+);
 
 module.exports = router;
