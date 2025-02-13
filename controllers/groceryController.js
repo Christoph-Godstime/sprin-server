@@ -204,10 +204,13 @@ module.exports = {
     const storeObjectId = new mongoose.Types.ObjectId(storeId);
 
     try {
-      const matchStage = storeObjectId
-        ? { groceryStore: storeObjectId } // If storeId is provided, filter groceries by store
-        : {};
+      const matchStage = {
+        isAvailable: true, // Only return groceries that are available
+      };
 
+      if (storeId) {
+        matchStage.groceryStore = new mongoose.Types.ObjectId(storeId);
+      }
       const results = await Grocery.aggregate([
         {
           $search: {
@@ -226,9 +229,8 @@ module.exports = {
           $match: matchStage, // Apply store filter if storeId is provided
         },
         {
-          $sort: { isAvailable: -1, title: 1 },
-          // Sort by:
-          // 1️⃣ `isAvailable: -1` → Available groceries (true) come first
+          $sort: { title: 1 },
+
           // 2️⃣ `title: 1` → Then sort alphabetically (A-Z)
         },
       ]);
