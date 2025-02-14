@@ -241,4 +241,29 @@ module.exports = {
       res.status(500).json({ error: error.message, status: false });
     }
   },
+
+  getRandomGroceries: async (req, res) => {
+    const { categoryId, excludeItemId } = req.params; // Get category ID and item ID from request parameters
+  
+    try {
+      const categoryObjectId = new mongoose.Types.ObjectId(categoryId);
+      const excludeObjectId = new mongoose.Types.ObjectId(excludeItemId);
+  
+      const groceries = await Grocery.aggregate([
+        {
+          $match: {
+            category: categoryObjectId, // Match groceries in the given category
+            _id: { $ne: excludeObjectId }, // Exclude the given item
+            isAvailable: true // Only include available items
+          }
+        },
+        { $sample: { size: 10 } } // Randomly pick 10 items
+      ]);
+  
+      res.status(200).json({ status: true, groceries });
+    } catch (error) {
+      console.error("Error fetching random groceries:", error);
+      res.status(500).json({ error: error.message, status: false });
+    }
+  },
 };

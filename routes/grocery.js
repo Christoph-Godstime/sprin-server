@@ -24,4 +24,6 @@ router.get(
   groceryController.userSearchGroceries
 );
 
+router.get("/random/:categoryId/:excludeItemId", groceryController.getRandomGroceries);
+
 module.exports = router;
