@@ -9,7 +9,7 @@ const {
 router.post("/", verifyTokenAndAuthorization, cartController.addProductToCart);
 
 router.put(
-  "/:restaurantId/:itemId",
+  "/:storeId/:itemId",
   verifyTokenAndAuthorization,
   cartController.updateItemInCart
 );
@@ -21,15 +21,15 @@ router.post(
 );
 
 router.delete(
-  "/delete/:restaurantId",
+  "/delete/:storeId/:itemType",
   verifyTokenAndAuthorization,
   cartController.removeProductFromCart
 );
 
 router.delete(
-  "/:restaurantId/:itemId",
+  "/:storeId/:itemId/:itemType",
   verifyTokenAndAuthorization,
-  cartController.removeSingleItemFromRestaurant
+  cartController.removeSingleItemFromStore
 );
 
 router.get("/", verifyTokenAndAuthorization, cartController.fetchUserCart);
@@ -37,9 +37,9 @@ router.get("/", verifyTokenAndAuthorization, cartController.fetchUserCart);
 router.get("/count", verifyTokenAndAuthorization, cartController.getCartCount);
 
 router.get(
-  "/:restaurantId",
+  "/:storeId",
   verifyTokenAndAuthorization,
-  cartController.getCartItemsByRestaurant
+  cartController.getCartItemsByStore
 );
 
 // router.get(

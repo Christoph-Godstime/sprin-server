@@ -6,7 +6,8 @@ module.exports = {
   addProductToCart: async (req, res) => {
     const userId = req.user.id;
     const {
-      foodId,
+      productId, // Food or Grocery ID
+      itemType, // "Food" or "Grocery"
       quantity,
       additives,
       instructions,
@@ -14,19 +15,28 @@ module.exports = {
       title,
       imageUrl,
       time,
-      restaurant,
+      storeId, // Store ID (Restaurant or GroceryStore)
+      storeType, // "Restaurant" or "GroceryStore"
     } = req.body.orderItem;
 
+    if (!productId || !quantity || !price || !storeId || !storeType) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    if (quantity <= 0 || price < 0) {
+      return res.status(400).json({ error: "Invalid quantity or price" });
+    }
+
     try {
-      let cart = await Cart.findOne({ userId, restaurantId: restaurant });
+      let cart = await Cart.findOne({ userId, storeId });
 
       if (cart) {
-        // Create a unique item ID for each item
         const newItemId = new mongoose.Types.ObjectId();
 
         cart.items.push({
           _id: newItemId,
-          foodId,
+          productId,
+          itemType,
           quantity,
           additives,
           instructions,
@@ -40,11 +50,13 @@ module.exports = {
       } else {
         cart = new Cart({
           userId,
-          restaurantId: restaurant,
+          storeId,
+          storeType,
           items: [
             {
-              _id: new mongoose.Types.ObjectId(), // Create a unique ID for the first item
-              foodId,
+              _id: new mongoose.Types.ObjectId(),
+              productId,
+              itemType,
               quantity,
               additives,
               instructions,
@@ -58,20 +70,17 @@ module.exports = {
         await cart.save();
       }
 
-      // Count the number of items for the specified restaurant
       const itemCount = cart.items.length;
-
-      // Count the total number of items in the user's cart
       const totalCount = await Cart.countDocuments({ userId });
 
       res.status(201).json({
         status: true,
         count: totalCount,
-        restaurantItemCount: itemCount,
+        storeItemCount: itemCount,
         message: "Item added to cart successfully",
       });
     } catch (error) {
-      console.error("Error adding product to cart:", error); // Detailed logging
+      console.error("Error adding product to cart:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   },
@@ -79,7 +88,7 @@ module.exports = {
   updateItemInCart: async (req, res) => {
     try {
       const userId = req.user.id; // Assuming the user ID is available in req.user
-      const { restaurantId, itemId } = req.params;
+      const { storeId, itemId } = req.params; // Use `storeId` instead of `restaurantId` for generalization
       const {
         quantity,
         additives,
@@ -88,14 +97,15 @@ module.exports = {
         title,
         imageUrl,
         time,
+        itemType, // Either "Food" or "Grocery"
       } = req.body;
 
-      // Find the cart by restaurantId and userId, and populate the restaurantId field
+      // Find the cart by storeId, userId, and storeType
       const cart = await Cart.findOne({
-        restaurantId: restaurantId,
-        userId: userId,
+        storeId,
+        userId,
       }).populate(
-        "restaurantId",
+        "storeId",
         "title logoUrl address rating ratingCount openingTime closingTime"
       ); // Populate specific fields
 
@@ -103,9 +113,22 @@ module.exports = {
         return res.status(404).json({ message: "Cart not found" });
       }
 
+      // Ensure the `storeType` and `itemType` match
+      const isValidType =
+        (cart.storeType === "Restaurant" && itemType === "Food") ||
+        (cart.storeType === "GroceryStore" && itemType === "Grocery");
+
+      if (!isValidType) {
+        return res.status(400).json({
+          message: `Invalid itemType for the given storeType: ${cart.storeType}`,
+        });
+      }
+
       // Find the index of the item to update
       const itemIndex = cart.items.findIndex(
-        (item) => item._id.toString() === itemId.toString()
+        (item) =>
+          item._id.toString() === itemId.toString() &&
+          item.itemType === itemType
       );
 
       if (itemIndex === -1) {
@@ -118,11 +141,13 @@ module.exports = {
         quantity:
           quantity !== undefined ? quantity : cart.items[itemIndex].quantity,
         additives:
-          additives !== undefined ? additives : cart.items[itemIndex].additives,
+          additives !== undefined && itemType === "Food"
+            ? additives
+            : cart.items[itemIndex].additives, // Only update additives if itemType is "Food"
         instructions:
-          instructions !== undefined
+          instructions !== undefined && itemType === "Food"
             ? instructions
-            : cart.items[itemIndex].instructions,
+            : cart.items[itemIndex].instructions, // Only update instructions if itemType is "Food"
         price: price !== undefined ? price : cart.items[itemIndex].price,
         title: title !== undefined ? title : cart.items[itemIndex].title,
         imageUrl:
@@ -144,93 +169,129 @@ module.exports = {
 
   removeProductFromCart: async (req, res) => {
     const userId = req.user.id;
-    const { restaurantId } = req.params;
+    const { storeId, itemType } = req.params; // `storeId` and `itemType` from request params
 
     try {
-      const cart = await Cart.findOne({ userId, restaurantId });
+      // Find the user's cart for the specified storeId and itemType
+      const cart = await Cart.findOne({
+        userId,
+        storeId,
+        "items.itemType": itemType, // Ensure the items have the specified itemType
+      });
 
       if (cart) {
-        // Remove all items from the specified restaurant
-        cart.items = [];
+        // Filter out items matching the itemType
+        cart.items = cart.items.filter((item) => item.itemType !== itemType);
+
+        // Save the updated cart
         await cart.save();
 
+        // Count the total number of carts for the user
         const count = await Cart.countDocuments({ userId });
+
         res.status(200).json({
           status: true,
           cartCount: count,
-          message: "All items from the restaurant removed successfully",
+          message: `All ${itemType} items removed from the specified store successfully`,
         });
       } else {
         res.status(404).json({
           status: false,
-          message: "Cart for the specified restaurant not found",
+          message: `No cart found for the specified store and itemType (${itemType})`,
         });
       }
     } catch (error) {
-      res.status(500).json(error);
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while removing items from the cart",
+        error: error.message,
+      });
     }
   },
 
-  removeSingleItemFromRestaurant: async (req, res) => {
+  removeSingleItemFromStore: async (req, res) => {
     const userId = req.user.id;
-    const { restaurantId, itemId } = req.params;
+    const { storeId, itemId, itemType } = req.params; // `storeId`, `itemId`, and `itemType` from request params
 
     try {
-      const cart = await Cart.findOne({ userId, restaurantId }).populate(
-        "items.foodId restaurantId"
-      );
+      // Find the cart for the user, store, and itemType
+      const cart = await Cart.findOne({
+        userId,
+        storeId,
+        "items.itemType": itemType, // Match the specific itemType (Food or Grocery)
+      }).populate("items.productId storeId");
 
       if (cart) {
-        // Find and remove the specific item by its unique ID
+        // Find the specific item by its unique ID
         const itemIndex = cart.items.findIndex(
           (item) => item._id.toString() === itemId
         );
 
         if (itemIndex > -1) {
-          // Remove the item from the array
+          // Remove the item from the cart
           cart.items.splice(itemIndex, 1);
           await cart.save();
 
           const count = await Cart.countDocuments({ userId });
-          const restaurantItemCount = cart.items.length;
+          const storeItemCount = cart.items.length;
 
-          // Prepare the response with updated cart details
+          // Prepare the updated cart response
           const updatedCart = {
             _id: cart._id,
             userId: cart.userId,
-            restaurantId: {
-              _id: cart.restaurantId._id,
-              closingTime: cart.restaurantId.closingTime,
-              code: cart.restaurantId.code,
-              coords: cart.restaurantId.coords,
-              createdAt: cart.restaurantId.createdAt,
-              delivery: cart.restaurantId.delivery,
-              foods: cart.restaurantId.foods,
-              imageUrl: cart.restaurantId.imageUrl,
-              isAvailable: cart.restaurantId.isAvailable,
-              location: cart.restaurantId.location,
-              logoUrl: cart.restaurantId.logoUrl,
-              openingTime: cart.restaurantId.openingTime,
-              owner: cart.restaurantId.owner,
-              pickup: cart.restaurantId.pickup,
-              rating: cart.restaurantId.rating,
-              ratingCount: cart.restaurantId.ratingCount,
-              restaurantDoc: cart.restaurantId.restaurantDoc,
-              title: cart.restaurantId.title,
-              updatedAt: cart.restaurantId.updatedAt,
-              verification: cart.restaurantId.verification,
-              verificationMessage: cart.restaurantId.verificationMessage,
+            storeId: {
+              _id: cart.storeId._id,
+              ...(cart.storeType === "Restaurant"
+                ? {
+                    closingTime: cart.storeId.closingTime,
+                    code: cart.storeId.code,
+                    coords: cart.storeId.coords,
+                    delivery: cart.storeId.delivery,
+                    foods: cart.storeId.foods,
+                    imageUrl: cart.storeId.imageUrl,
+                    isAvailable: cart.storeId.isAvailable,
+                    location: cart.storeId.location,
+                    logoUrl: cart.storeId.logoUrl,
+                    openingTime: cart.storeId.openingTime,
+                    owner: cart.storeId.owner,
+                    pickup: cart.storeId.pickup,
+                    rating: cart.storeId.rating,
+                    ratingCount: cart.storeId.ratingCount,
+                    title: cart.storeId.title,
+                    updatedAt: cart.storeId.updatedAt,
+                    verification: cart.storeId.verification,
+                    verificationMessage: cart.storeId.verificationMessage,
+                  }
+                : {
+                    coords: cart.storeId.coords,
+                    location: cart.storeId.location,
+                    imageUrl: cart.storeId.imageUrl,
+                    logoUrl: cart.storeId.logoUrl,
+                    title: cart.storeId.title,
+                    isAvailable: cart.storeId.isAvailable,
+                    openingTime: cart.storeId.openingTime,
+                    closingTime: cart.storeId.closingTime,
+                    delivery: cart.storeId.delivery,
+                  }),
             },
             items: cart.items.map((item) => ({
               _id: item._id,
-              foodId: {
-                _id: item.foodId._id,
-                imageUrl: item.foodId.imageUrl,
-                title: item.foodId.title,
-                restaurant: item.foodId.restaurant,
-                rating: item.foodId.rating,
-                ratingCount: item.foodId.ratingCount,
-                description: item.foodId.description,
+              productId: {
+                _id: item.productId._id,
+                imageUrl: item.productId.imageUrl,
+                title: item.productId.title,
+                ...(itemType === "Food"
+                  ? {
+                      restaurant: item.productId.restaurant,
+                      rating: item.productId.rating,
+                      ratingCount: item.productId.ratingCount,
+                      description: item.productId.description,
+                    }
+                  : {
+                      category: item.productId.category,
+                      subCategory: item.productId.subCategory,
+                      quantity: item.productId.quantity,
+                    }),
               },
               quantity: item.quantity,
               additives: item.additives,
@@ -245,23 +306,28 @@ module.exports = {
           res.status(200).json({
             status: true,
             cartCount: count,
-            restaurantItemCount: restaurantItemCount,
+            storeItemCount: storeItemCount,
             cart: updatedCart,
             message: "Item removed successfully",
           });
         } else {
-          res
-            .status(404)
-            .json({ status: false, message: "Item not found in the cart" });
+          res.status(404).json({
+            status: false,
+            message: "Item not found in the cart",
+          });
         }
       } else {
         res.status(404).json({
           status: false,
-          message: "Cart for the specified restaurant not found",
+          message: `Cart for the specified store and itemType (${itemType}) not found`,
         });
       }
     } catch (error) {
-      res.status(500).json({ status: false, message: error.message });
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while removing the item from the cart",
+        error: error.message,
+      });
     }
   },
 
@@ -272,16 +338,21 @@ module.exports = {
       // Find all carts for the user
       const userCarts = await Cart.find({ userId })
         .populate({
-          path: "items.foodId",
-          select: "rating ratingCount imageUrl title restaurant description",
+          path: "items.productId",
+          select:
+            "title imageUrl price rating ratingCount description category quantity isAvailable",
+          populate: {
+            path: "category",
+            select: "name",
+          },
         })
         .populate({
-          path: "restaurantId",
+          path: "storeId",
           select:
-            "title logoUrl coords rating ratingCount openingTime closingTime foods pickup delivery owner isAvailable verification verificationMessage code distance location coords imageUrl", // Adjust the fields you need
+            "title logoUrl coords rating ratingCount openingTime closingTime imageUrl isAvailable verification code distance location",
         });
 
-      // Find carts with no items and delete them
+      // Find and delete carts with no items
       const emptyCartIds = userCarts
         .filter((cart) => cart.items.length === 0)
         .map((cart) => cart._id);
@@ -290,59 +361,64 @@ module.exports = {
         await Cart.deleteMany({ _id: { $in: emptyCartIds } });
       }
 
-      // Fetch the remaining carts for the user after deletion
+      // Fetch the remaining carts after deletion
       const remainingCarts = await Cart.find({ userId })
         .populate({
-          path: "items.foodId",
-          select: "rating ratingCount imageUrl title restaurant description",
+          path: "items.productId",
+          select:
+            "title imageUrl price rating ratingCount description category quantity isAvailable",
+          populate: {
+            path: "category",
+            select: "name",
+          },
         })
         .populate({
-          path: "restaurantId",
+          path: "storeId",
           select:
-            "title logoUrl coords rating ratingCount openingTime closingTime foods pickup delivery owner isAvailable verification verificationMessage code distance location coords imageUrl", // Adjust the fields you need
+            "title logoUrl coords rating ratingCount openingTime closingTime imageUrl isAvailable verification code distance location",
         });
 
-      // Map through the remaining carts to format the response
+      // Format the response
       const formattedCarts = remainingCarts.map((cart) => {
+        const isRestaurant = cart.storeType === "Restaurant";
         return {
           _id: cart._id,
           userId: cart.userId,
-          restaurantId: {
-            _id: cart.restaurantId._id,
-            title: cart.restaurantId.title,
-            logoUrl: cart.restaurantId.logoUrl,
-            address: cart.restaurantId.coords.address,
-            rating: cart.restaurantId.rating,
-            ratingCount: cart.restaurantId.ratingCount,
-            openingTime: cart.restaurantId.openingTime,
-            closingTime: cart.restaurantId.closingTime,
-            foods: cart.restaurantId.foods,
-            pickup: cart.restaurantId.pickup,
-            delivery: cart.restaurantId.delivery,
-            owner: cart.restaurantId.owner,
-            isAvailable: cart.restaurantId.isAvailable,
-            verification: cart.restaurantId.verification,
-            verificationMessage: cart.restaurantId.verificationMessage,
-            code: cart.restaurantId.code,
-            distance: cart.restaurantId.distance,
-            location: cart.restaurantId.location,
-            coords: cart.restaurantId.coords,
-            imageUrl: cart.restaurantId.imageUrl,
+          storeId: {
+            _id: cart.storeId._id,
+            title: cart.storeId.title,
+            logoUrl: cart.storeId.logoUrl,
+            address: cart.storeId.coords?.address,
+            rating: cart.storeId.rating,
+            ratingCount: cart.storeId.ratingCount,
+            openingTime: cart.storeId.openingTime,
+            closingTime: cart.storeId.closingTime,
+            isAvailable: cart.storeId.isAvailable,
+            verification: cart.storeId.verification,
+            code: cart.storeId.code,
+            distance: cart.storeId.distance,
+            location: cart.storeId.location,
+            imageUrl: cart.storeId.imageUrl,
           },
+          storeType: cart.storeType,
           items: cart.items.map((item) => ({
             _id: item._id, // Unique ID for each item
-            foodId: {
-              _id: item.foodId._id,
-              imageUrl: item.foodId.imageUrl,
-              title: item.foodId.title,
-              restaurant: item.foodId.restaurant,
-              rating: item.foodId.rating,
-              ratingCount: item.foodId.ratingCount,
-              description: item.foodId.description,
+            productId: {
+              _id: item.productId._id,
+              title: item.productId.title,
+              imageUrl: item.productId.imageUrl,
+              price: item.productId.price,
+              rating: item.productId.rating || null,
+              ratingCount: item.productId.ratingCount || null,
+              description: item.productId.description || null,
+              category: item.productId.category?.name || null,
+              quantity: item.productId.quantity || null,
+              isAvailable: item.productId.isAvailable,
             },
+            itemType: item.itemType,
             quantity: item.quantity,
-            additives: item.additives,
-            instructions: item.instructions,
+            additives: isRestaurant ? item.additives : undefined, // Only for restaurants
+            instructions: isRestaurant ? item.instructions : undefined, // Only for restaurants
             price: item.price,
             title: item.title,
             imageUrl: item.imageUrl,
@@ -357,19 +433,23 @@ module.exports = {
     }
   },
 
-  getCartItemsByRestaurant: async (req, res) => {
+  getCartItemsByStore: async (req, res) => {
     const userId = req.user.id;
-    const { restaurantId } = req.params;
+    const { storeId } = req.params;
 
     try {
-      // Find the cart for the user and restaurant
-      const cart = await Cart.findOne({ userId, restaurantId })
+      const cart = await Cart.findOne({ userId, storeId })
         .populate({
-          path: "items.foodId",
-          select: "rating ratingCount imageUrl title restaurant description",
+          path: "items.productId",
+          select:
+            "title imageUrl price quantity category subCategory rating ratingCount groceryStore restaurant",
+          populate: {
+            path: "category",
+            select: "title",
+          },
         })
         .populate({
-          path: "restaurantId",
+          path: "storeId",
           select:
             "title logoUrl coords rating ratingCount openingTime closingTime foods pickup delivery owner isAvailable verification verificationMessage code distance location coords imageUrl",
         });
@@ -377,55 +457,72 @@ module.exports = {
       if (!cart) {
         return res.status(404).json({
           status: false,
-          message: "Cart for the specified restaurant not found",
+          message: "Cart for the specified store not found",
         });
       }
 
-      // Format the response
+      const isRestaurant = cart.storeType === "Restaurant";
+
+      // Format the store details
+      const formattedStore = {
+        _id: cart.storeId._id,
+        title: cart.storeId.title,
+        logoUrl: cart.storeId.logoUrl,
+        address: cart.storeId.coords?.address || null,
+        rating: cart.storeId.rating,
+        ratingCount: cart.storeId.ratingCount,
+        openingTime: cart.storeId.openingTime,
+        closingTime: cart.storeId.closingTime,
+        foods: isRestaurant ? cart.storeId.foods : undefined,
+        pickup: cart.storeId.pickup,
+        delivery: cart.storeId.delivery,
+        owner: cart.storeId.owner,
+        isAvailable: cart.storeId.isAvailable,
+        verification: cart.storeId.verification,
+        verificationMessage: cart.storeId.verificationMessage,
+        code: cart.storeId.code,
+        distance: cart.storeId.distance,
+        location: cart.storeId.location,
+        coords: cart.storeId.coords,
+        imageUrl: cart.storeId.imageUrl,
+        storeType: isRestaurant ? "Restaurant" : "GroceryStore",
+      };
+
+      // Format the cart items
+      const formattedItems = cart.items.map((item) => ({
+        _id: item._id,
+        productId: {
+          _id: item.productId._id,
+          title: item.productId.title,
+          imageUrl: item.productId.imageUrl,
+          price: item.productId.price,
+          ...(isRestaurant
+            ? {
+                rating: item.productId.rating,
+                ratingCount: item.productId.ratingCount,
+                restaurant: item.productId.restaurant, // Restaurant-specific data
+              }
+            : {
+                quantity: item.productId.quantity,
+                category: item.productId.category?.title || null,
+                subCategory: item.productId.subCategory || null,
+                groceryStore: item.productId.groceryStore,
+              }),
+        },
+        quantity: item.quantity,
+        additives: item.additives,
+        instructions: item.instructions,
+        price: item.price,
+        title: item.title,
+        imageUrl: item.imageUrl,
+        time: item.time,
+      }));
+
       const formattedCart = {
         _id: cart._id,
         userId: cart.userId,
-        restaurantId: {
-          _id: cart.restaurantId._id,
-          title: cart.restaurantId.title,
-          logoUrl: cart.restaurantId.logoUrl,
-          address: cart.restaurantId.coords.address,
-          rating: cart.restaurantId.rating,
-          ratingCount: cart.restaurantId.ratingCount,
-          openingTime: cart.restaurantId.openingTime,
-          closingTime: cart.restaurantId.closingTime,
-          foods: cart.restaurantId.foods,
-          pickup: cart.restaurantId.pickup,
-          delivery: cart.restaurantId.delivery,
-          owner: cart.restaurantId.owner,
-          isAvailable: cart.restaurantId.isAvailable,
-          verification: cart.restaurantId.verification,
-          verificationMessage: cart.restaurantId.verificationMessage,
-          code: cart.restaurantId.code,
-          distance: cart.restaurantId.distance,
-          location: cart.restaurantId.location,
-          coords: cart.restaurantId.coords,
-          imageUrl: cart.restaurantId.imageUrl,
-        },
-        items: cart.items.map((item) => ({
-          _id: item._id,
-          foodId: {
-            _id: item.foodId._id,
-            imageUrl: item.foodId.imageUrl,
-            title: item.foodId.title,
-            restaurant: item.foodId.restaurant,
-            rating: item.foodId.rating,
-            ratingCount: item.foodId.ratingCount,
-            description: item.foodId.description,
-          },
-          quantity: item.quantity,
-          additives: item.additives,
-          instructions: item.instructions,
-          price: item.price,
-          title: item.title,
-          imageUrl: item.imageUrl,
-          time: item.time,
-        })),
+        storeId: formattedStore,
+        items: formattedItems,
       };
 
       res.status(200).json({ status: true, cart: formattedCart });

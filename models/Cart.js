@@ -3,21 +3,35 @@ const mongoose = require("mongoose");
 const cartSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    restaurantId: { type: mongoose.Schema.Types.ObjectId, ref: "Restaurant" },
+    storeId: { type: mongoose.Schema.Types.ObjectId, refPath: "storeType" }, // Reference to either a Restaurant or GroceryStore
+    storeType: {
+      type: String,
+      enum: ["Restaurant", "GroceryStore"],
+      required: true,
+    }, // Store type
     items: [
       {
         _id: {
           type: mongoose.Schema.Types.ObjectId,
           default: mongoose.Types.ObjectId,
         },
-        foodId: { type: mongoose.Schema.Types.ObjectId, ref: "Food" },
+        productId: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: true,
+          refPath: "items.itemType", // Dynamically reference based on itemType
+        },
+        itemType: {
+          type: String,
+          enum: ["Food", "Grocery"], // Dynamically determines which model productId refers to
+          required: true,
+        },
         quantity: { type: Number, required: true },
-        additives: { type: Array },
-        instructions: { type: String, default: "" },
+        additives: { type: Array }, // Optional for grocery
+        instructions: { type: String, default: "" }, // Optional for grocery
         price: { type: Number, required: true },
         title: { type: String, required: true },
         imageUrl: { type: String, required: true },
-        time: { type: String },
+        time: { type: String }, // Optional delivery or preparation time
       },
     ],
   },
