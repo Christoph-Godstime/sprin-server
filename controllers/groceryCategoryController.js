@@ -457,70 +457,77 @@ module.exports = {
       res.status(500).json({ status: false, message: error.message });
     }
   },
-  getCategoryWithGroceries: async (req, res) => {
-    const { id } = req.params; // Category ID
 
-    try {
-      // Find the category by ID
-      const category = await GroceryCategory.findById(id);
+ getCategoryWithGroceries: async (req, res) => {
+  const { id } = req.params; // Category ID
 
-      if (!category) {
-        return res
-          .status(404)
-          .json({ status: false, message: "Category not found" });
-      }
+  try {
+    // Find the category by ID
+    const category = await GroceryCategory.findById(id);
 
-      // Fetch subcategories
-      const subcategories = await SubCategory.find({
-        categoryId: category._id,
-      });
-
-      // Fetch groceries grouped by subcategory
-      const groceries = await Grocery.aggregate([
-        { $match: { category: category._id } },
-        {
-          $group: {
-            _id: "$subCategory",
-            items: {
-              $push: {
-                _id: "$_id",
-                title: "$title",
-                price: "$price",
-                quantity: "$quantity",
-                imageUrl: "$imageUrl",
-                groceryStore: "$groceryStore",
-                isAvailable: "$isAvailable",
-              },
-            },
-          },
-        },
-      ]);
-
-      // Format the response with subcategories and their corresponding groceries
-      const formattedData = {
-        _id: category._id,
-        title: category.title,
-        value: category.value,
-        imageUrl: category.imageUrl,
-        subCategories: subcategories.map((sub) => ({
-          _id: sub._id,
-          title: sub.title,
-          value: sub.value,
-          imageUrl: sub.imageUrl,
-          groceries:
-            groceries.find((g) => g._id.toString() === sub._id.toString())
-              ?.items || [],
-        })),
-      };
-
-      res.status(200).json({
-        status: true,
-        message: "Category retrieved successfully",
-        data: formattedData,
-      });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ status: false, message: "Server error", error });
+    if (!category) {
+      return res
+        .status(404)
+        .json({ status: false, message: "Category not found" });
     }
-  },
+
+    // Fetch subcategories
+    const subcategories = await SubCategory.find({ categoryId: category._id });
+
+    // Fetch groceries grouped by subcategory, returning only the required fields
+    const groceries = await Grocery.aggregate([
+      { $match: { category: category._id } },
+      {
+        $project: {
+          _id: 1,
+          category: 1,
+          subCategory: 1,
+          groceryStore: 1,
+          price: 1,
+          quantity: 1,
+          isAvailable: 1,
+          imageUrl: 1,
+          location: 1,
+          title: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          __v: 1,
+        },
+      },
+      {
+        $group: {
+          _id: "$subCategory",
+          items: { $push: "$$ROOT" }, // Includes only the projected fields
+        },
+      },
+    ]);
+
+    // Format the response with subcategories and their corresponding groceries
+    const formattedData = {
+      _id: category._id,
+      title: category.title,
+      value: category.value,
+      imageUrl: category.imageUrl,
+      subCategories: subcategories.map((sub) => ({
+        _id: sub._id,
+        title: sub.title,
+        value: sub.value,
+        imageUrl: sub.imageUrl,
+        groceries:
+          groceries.find((g) => g._id?.toString() === sub._id?.toString())
+            ?.items || [],
+      })),
+    };
+
+    res.status(200).json({
+      status: true,
+      message: "Category retrieved successfully",
+      data: formattedData,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ status: false, message: "Server error", error });
+  }
+},
+
 };
