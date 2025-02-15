@@ -6,7 +6,7 @@ module.exports = {
   addProductToCart: async (req, res) => {
     const userId = req.user.id;
     const {
-      productId, // Food or Grocery ID
+      productId,
       itemType, // "Food" or "Grocery"
       quantity,
       additives,
@@ -15,39 +15,49 @@ module.exports = {
       title,
       imageUrl,
       time,
-      storeId, // Store ID (Restaurant or GroceryStore)
+      storeId,
       storeType, // "Restaurant" or "GroceryStore"
     } = req.body.orderItem;
-
+  
     if (!productId || !quantity || !price || !storeId || !storeType) {
       return res.status(400).json({ error: "Missing required fields" });
     }
-
+  
     if (quantity <= 0 || price < 0) {
       return res.status(400).json({ error: "Invalid quantity or price" });
     }
-
+  
     try {
       let cart = await Cart.findOne({ userId, storeId });
-
+  
       if (cart) {
-        const newItemId = new mongoose.Types.ObjectId();
-
-        cart.items.push({
-          _id: newItemId,
-          productId,
-          itemType,
-          quantity,
-          additives,
-          instructions,
-          price,
-          title,
-          imageUrl,
-          time,
-        });
-
+        // Check if the item already exists in the cart (only for Grocery items)
+        let existingItem = cart.items.find(
+          (item) => item.productId.toString() === productId && item.itemType === "Grocery"
+        );
+  
+        if (existingItem) {
+          // If Grocery item exists, update quantity
+          existingItem.quantity += quantity;
+        } else {
+          // If Food item or a new Grocery item, create a new entry
+          cart.items.push({
+            _id: new mongoose.Types.ObjectId(),
+            productId,
+            itemType,
+            quantity,
+            additives,
+            instructions,
+            price,
+            title,
+            imageUrl,
+            time,
+          });
+        }
+  
         await cart.save();
       } else {
+        // Create new cart if it doesn't exist
         cart = new Cart({
           userId,
           storeId,
@@ -67,12 +77,13 @@ module.exports = {
             },
           ],
         });
+  
         await cart.save();
       }
-
+  
       const itemCount = cart.items.length;
       const totalCount = await Cart.countDocuments({ userId });
-
+  
       res.status(201).json({
         status: true,
         count: totalCount,
@@ -84,6 +95,7 @@ module.exports = {
       res.status(500).json({ error: "Internal server error" });
     }
   },
+  
 
   updateItemInCart: async (req, res) => {
     try {
