@@ -351,6 +351,7 @@ module.exports = {
     try {
       // Find all carts for the user
       const userCarts = await Cart.find({ userId })
+        .sort({ updatedAt: -1 }) // Sort by latest updatedAt
         .populate({
           path: "items.productId",
           select:
@@ -377,6 +378,7 @@ module.exports = {
 
       // Fetch the remaining carts after deletion
       const remainingCarts = await Cart.find({ userId })
+        .sort({ updatedAt: -1 }) // Sort by latest updatedAt
         .populate({
           path: "items.productId",
           select:
