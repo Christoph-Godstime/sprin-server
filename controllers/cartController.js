@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Cart = require("../models/Cart");
 const Food = require("../models/Food");
+const GroceryStore = require("../models/GroceryStore");
 
 module.exports = {
   addProductToCart: async (req, res) => {
@@ -220,6 +221,115 @@ module.exports = {
         message: "An error occurred while removing items from the cart",
         error: error.message,
       });
+    }
+  },
+
+  getNearestGroceryStoreCart: async (req, res) => {
+    try {
+      const latitude = parseFloat(req.query.lat);
+      const longitude = parseFloat(req.query.lng);
+      const userId = req.user.id;
+      const radius = 10000; // 10 km radius
+
+      if (!latitude || !longitude || !userId) {
+        return res.status(400).json({
+          message: "Latitude, longitude, and userId are required",
+          status: false,
+        });
+      }
+
+      // Find the nearest grocery store
+      const nearestStores = await GroceryStore.aggregate([
+        {
+          $geoNear: {
+            near: { type: "Point", coordinates: [longitude, latitude] },
+            distanceField: "distance",
+            maxDistance: radius,
+            spherical: true,
+          },
+        },
+        { $limit: 1 },
+      ]);
+
+      if (!nearestStores.length) {
+        return res.status(404).json({
+          message: "No grocery store found within the radius",
+          status: false,
+        });
+      }
+
+      const nearestStore = nearestStores[0];
+
+      // Find the user's cart for the nearest grocery store
+      const cart = await Cart.findOne({
+        userId,
+        storeId: nearestStore._id,
+        storeType: "GroceryStore",
+      })
+        .populate({ path: "storeId" })
+        .populate({ path: "items.productId" });
+
+      if (!cart || cart.items.length === 0) {
+        return res
+          .status(200)
+          .json({ message: "No cart found for this store", status: false });
+      }
+
+      // Calculate total price (without multiplying by quantity)
+      const totalPrice = cart.items.reduce((sum, item) => sum + item.price, 0);
+
+      // Format response
+      const formattedCart = {
+        status: true,
+        _id: cart._id,
+        userId: cart.userId,
+        storeId: {
+          _id: nearestStore._id,
+          title: nearestStore.title,
+          logoUrl: nearestStore.logoUrl,
+          address: nearestStore.coords?.address,
+          rating: nearestStore.rating,
+          ratingCount: nearestStore.ratingCount,
+          openingTime: nearestStore.openingTime,
+          closingTime: nearestStore.closingTime,
+          isAvailable: nearestStore.isAvailable,
+          verification: nearestStore.verification,
+          code: nearestStore.code,
+          distance: nearestStore.distance,
+          location: nearestStore.location,
+          imageUrl: nearestStore.imageUrl,
+        },
+        storeType: cart.storeType,
+        items: cart.items.map((item) => ({
+          _id: item._id,
+          productId: {
+            _id: item.productId._id,
+            title: item.productId.title,
+            imageUrl: item.productId.imageUrl,
+            price: item.productId.price,
+            rating: item.productId.rating || null,
+            ratingCount: item.productId.ratingCount || null,
+            description: item.productId.description || null,
+            category: item.productId.category?.name || null,
+            quantity: item.productId.quantity || null,
+            isAvailable: item.productId.isAvailable,
+          },
+          itemType: item.itemType,
+          quantity: item.quantity,
+          price: item.price,
+          title: item.title,
+          imageUrl: item.imageUrl,
+          time: item.time,
+        })),
+        totalPrice,
+      };
+
+      return res.status(200).json(formattedCart);
+    } catch (error) {
+      console.error(error);
+      return res
+        .status(500)
+        .json({ message: "Internal server error", status: false });
     }
   },
 

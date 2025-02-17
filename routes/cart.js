@@ -20,6 +20,12 @@ router.post(
   cartController.decrementProductQuantity
 );
 
+router.get(
+  "/nearest-grocery-cart",
+  verifyTokenAndAuthorization,
+  cartController.getNearestGroceryStoreCart
+);
+
 router.delete(
   "/delete/:storeId/:itemType",
   verifyTokenAndAuthorization,
