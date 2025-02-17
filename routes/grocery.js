@@ -7,7 +7,7 @@ router.post("/", verifyStore, groceryController.addGroceryItem);
 
 router.get(
   "/subcategories-groceries/:categoryId",
-  verifyStore,
+
   groceryController.getSubCategoriesAndGroceries
 );
 
@@ -24,6 +24,9 @@ router.get(
   groceryController.userSearchGroceries
 );
 
-router.get("/random/:categoryId/:excludeItemId", groceryController.getRandomGroceries);
+router.get(
+  "/random/:categoryId/:excludeItemId",
+  groceryController.getRandomGroceries
+);
 
 module.exports = router;
