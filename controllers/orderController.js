@@ -279,7 +279,7 @@ module.exports = {
             },
           })
           .populate({
-            path: "orderItems.foodId",
+            path: "orderItems.productId",
             select: "title imageUrl time",
           })
           .populate({
@@ -408,7 +408,10 @@ module.exports = {
             select: "expoPushToken firstName lastName phone",
           },
         })
-        .populate({ path: "orderItems.foodId", select: "title imageUrl time" })
+        .populate({
+          path: "orderItems.productId",
+          select: "title imageUrl time",
+        })
         .populate({
           path: "deliveryAddress",
           select: "addressLine1 latitude longitude",
