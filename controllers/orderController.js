@@ -1,5 +1,7 @@
 const Order = require("../models/Orders");
 const Food = require("../models/Food");
+const Grocery = require("../models/Grocery");
+const GroceryStore = require("../models/GroceryStore");
 const Feedback = require("../models/Feedback");
 const User = require("../models/User");
 const Restaurant = require("../models/Restaurant");
@@ -245,7 +247,8 @@ module.exports = {
   },
 
   verifyPayment: async (req, res) => {
-    const { reference, orderId, restaurantId, senderId, referredBy } = req.body;
+    const { reference, orderId, storeId, senderId, referredBy, storeType } =
+      req.body;
 
     try {
       const response = await axios.get(
@@ -263,14 +266,12 @@ module.exports = {
 
         const updatedOrder = await Order.findById(orderId)
           .select(
-            "userId deliveryAddress orderItems deliveryFee restaurantId orderStatus restaurantCoords recipientCoords paymentStatus orderDate restaurantSecretCode riderSecretCode updatedAt freeDelivery"
+            "userId deliveryAddress orderItems deliveryFee storeId orderStatus storeCoords recipientCoords paymentStatus orderDate storeSecretCode riderSecretCode updatedAt freeDelivery"
           )
+          .populate({ path: "userId", select: "phone profile" })
           .populate({
-            path: "userId",
-            select: "phone profile",
-          })
-          .populate({
-            path: "restaurantId",
+            path: "storeId",
+            model: storeType === "restaurant" ? "Restaurant" : "GroceryStore",
             select: "title imageUrl logoUrl time",
             populate: {
               path: "owner",
@@ -286,35 +287,27 @@ module.exports = {
             select: "addressLine1 latitude longitude",
           });
 
-        const restaurantOwnerPushToken =
-          updatedOrder.restaurantId.owner?.expoPushToken;
+        const storeOwnerPushToken = updatedOrder.storeId.owner?.expoPushToken;
 
-        if (restaurantOwnerPushToken) {
+        if (storeOwnerPushToken) {
           await sendPushNotification(
-            [restaurantOwnerPushToken],
+            [storeOwnerPushToken],
             "New Order Request 🚀",
             "You have received a new order! Open the app to view the details and start preparing."
           );
         } else {
-          console.error("Restaurant owner's expoPushToken not found.");
+          console.error("Store owner's expoPushToken not found.");
         }
 
         if (referredBy) {
-          // Update the referrer's wallet balance and send push notification
           const referrer = await User.findById(referredBy);
           if (referrer) {
             referrer.walletBalance += 500;
             await referrer.save();
 
-            // Atomic update for company revenue
             await CompanyRevenue.findOneAndUpdate(
               {},
-              {
-                $inc: {
-                  referral: 1000,
-                  balance: -1000,
-                },
-              },
+              { $inc: { referral: 1000, balance: -1000 } },
               { new: true, upsert: true }
             );
 
@@ -335,19 +328,13 @@ module.exports = {
           }
         }
 
-        const isFreeDelivery = updatedOrder.freeDelivery;
-
-        const deliveryFee = Number(updatedOrder.deliveryFee);
-
-        // If it's free delivery
-        if (isFreeDelivery) {
-          // Atomic update for company revenue
+        if (updatedOrder.freeDelivery) {
           await CompanyRevenue.findOneAndUpdate(
             {},
             {
               $inc: {
-                freedelivery: deliveryFee,
-                balance: -deliveryFee,
+                freedelivery: Number(updatedOrder.deliveryFee),
+                balance: -Number(updatedOrder.deliveryFee),
               },
             },
             { new: true, upsert: true }
@@ -367,7 +354,7 @@ module.exports = {
             await sendPushNotification(
               adminPushTokens,
               "Admin Notification - New Restaurant Order",
-              `A new order for ${updatedOrder.restaurantId.title} on ${nigerianTime} | ${updatedOrder.restaurantId.owner?.phone}.`
+              `A new order for ${updatedOrder.storeId.title} on ${nigerianTime} | ${updatedOrder.storeId.owner?.phone}.`
             );
             console.log("Admin notification sent successfully.");
           } catch (notificationError) {
@@ -383,18 +370,10 @@ module.exports = {
           .json({ status: true, message: "Payment verified successfully" });
 
         const { userSocketMap, io } = req;
-        const restaurantSocketId = userSocketMap[restaurantId];
+        const storeSocketId = userSocketMap[storeId];
 
-        console.log("restaurant Id", restaurantId);
-
-        if (restaurantSocketId) {
-          console.log(
-            "emitting recieveOrder event to the restaurant",
-            restaurantId
-          );
-          io.to(restaurantSocketId).emit("newOrder", updatedOrder);
-        } else {
-          console.log("restaurant socekt ID not found");
+        if (storeSocketId) {
+          io.to(storeSocketId).emit("newOrder", updatedOrder);
         }
       } else {
         res
@@ -402,12 +381,12 @@ module.exports = {
           .json({ status: false, message: "Payment verification failed" });
       }
     } catch (error) {
-      res.status(500).json({ status: false, message: error });
+      res.status(500).json({ status: false, message: error.message });
     }
   },
 
   verifyWalletPayment: async (req, res) => {
-    const { orderId, restaurantId, senderId, referredBy } = req.body;
+    const { orderId, storeId, senderId, referredBy, storeType } = req.body;
 
     try {
       await Order.findByIdAndUpdate(orderId, {
@@ -417,58 +396,45 @@ module.exports = {
 
       const updatedOrder = await Order.findById(orderId)
         .select(
-          "userId deliveryAddress orderItems deliveryFee restaurantId orderStatus restaurantCoords recipientCoords paymentStatus orderDate restaurantSecretCode riderSecretCode updatedAt freeDelivery"
+          "userId deliveryAddress orderItems deliveryFee storeId orderStatus storeCoords recipientCoords paymentStatus orderDate storeSecretCode riderSecretCode updatedAt freeDelivery"
         )
+        .populate({ path: "userId", select: "phone profile" })
         .populate({
-          path: "userId",
-          select: "phone profile",
-        })
-        .populate({
-          path: "restaurantId",
+          path: "storeId",
+          model: storeType === "restaurant" ? "Restaurant" : "GroceryStore",
           select: "title imageUrl logoUrl time",
           populate: {
             path: "owner",
             select: "expoPushToken firstName lastName phone",
           },
         })
-        .populate({
-          path: "orderItems.foodId",
-          select: "title imageUrl time",
-        })
+        .populate({ path: "orderItems.foodId", select: "title imageUrl time" })
         .populate({
           path: "deliveryAddress",
           select: "addressLine1 latitude longitude",
         });
 
-      const restaurantOwnerPushToken =
-        updatedOrder.restaurantId.owner?.expoPushToken;
+      const storeOwnerPushToken = updatedOrder.storeId.owner?.expoPushToken;
 
-      if (restaurantOwnerPushToken) {
+      if (storeOwnerPushToken) {
         await sendPushNotification(
-          [restaurantOwnerPushToken],
+          [storeOwnerPushToken],
           "New Order Request 🚀",
           "You have received a new order! Open the app to view the details and start preparing."
         );
       } else {
-        console.error("Restaurant owner's expoPushToken not found.");
+        console.error("Store owner's expoPushToken not found.");
       }
 
       if (referredBy) {
-        // Update the referrer's wallet balance and send push notification
         const referrer = await User.findById(referredBy);
         if (referrer) {
           referrer.walletBalance += 500;
           await referrer.save();
 
-          // Atomic update for company revenue
           await CompanyRevenue.findOneAndUpdate(
             {},
-            {
-              $inc: {
-                referral: 1000,
-                balance: -1000,
-              },
-            },
+            { $inc: { referral: 1000, balance: -1000 } },
             { new: true, upsert: true }
           );
 
@@ -489,19 +455,13 @@ module.exports = {
         }
       }
 
-      const isFreeDelivery = updatedOrder.freeDelivery;
-
-      const deliveryFee = Number(updatedOrder.deliveryFee);
-
-      // If it's free delivery
-      if (isFreeDelivery) {
-        // Atomic update for company revenue
+      if (updatedOrder.freeDelivery) {
         await CompanyRevenue.findOneAndUpdate(
           {},
           {
             $inc: {
-              freedelivery: deliveryFee,
-              balance: -deliveryFee,
+              freedelivery: Number(updatedOrder.deliveryFee),
+              balance: -Number(updatedOrder.deliveryFee),
             },
           },
           { new: true, upsert: true }
@@ -518,11 +478,10 @@ module.exports = {
       if (adminPushTokens.length > 0) {
         try {
           const nigerianTime = convertToNigerianTime(updatedOrder.orderDate);
-
           await sendPushNotification(
             adminPushTokens,
             "Admin Notification - New Restaurant Order",
-            `A new order for ${updatedOrder.restaurantId.title} on ${nigerianTime} | ${updatedOrder.restaurantId.owner?.phone}.`
+            `A new order for ${updatedOrder.storeId.title} on ${nigerianTime} | ${updatedOrder.storeId.owner?.phone}.`
           );
           console.log("Admin notification sent successfully.");
         } catch (notificationError) {
@@ -538,18 +497,15 @@ module.exports = {
         .json({ status: true, message: "Payment verified successfully" });
 
       const { userSocketMap, io } = req;
-      const restaurantSocketId = userSocketMap[restaurantId];
+      const storeSocketId = userSocketMap[storeId];
 
-      console.log("restaurant Id", restaurantId);
+      console.log("store Id", storeId);
 
-      if (restaurantSocketId) {
-        console.log(
-          "emitting recieveOrder event to the restaurant",
-          restaurantId
-        );
-        io.to(restaurantSocketId).emit("newOrder", updatedOrder);
+      if (storeSocketId) {
+        console.log("emitting recieveOrder event to the store", storeId);
+        io.to(storeSocketId).emit("newOrder", updatedOrder);
       } else {
-        console.log("restaurant socekt ID not found");
+        console.log("store socekt ID not found");
       }
     } catch (error) {
       res.status(500).json({ status: false, message: error });
@@ -558,16 +514,21 @@ module.exports = {
 
   placeOrder: async (req, res) => {
     try {
-      const { restaurantId, orderItems } = req.body;
+      const { storeId, storeType, orderItems } = req.body;
 
-      // Fetch the restaurant by ID
-      const restaurant = await Restaurant.findById(restaurantId);
+      // Fetch the store based on storeId and storeType
+      let store;
+      if (storeType === "Restaurant") {
+        store = await Restaurant.findById(storeId);
+      } else if (storeType === "GroceryStore") {
+        store = await GroceryStore.findById(storeId); // Replace with the actual model for grocery stores
+      }
 
-      // Check if the restaurant exists
-      if (!restaurant) {
+      // Check if the store exists
+      if (!store) {
         return res.status(404).json({
           status: false,
-          message: "Restaurant not found",
+          message: `${storeType} not found`,
         });
       }
 
@@ -585,7 +546,7 @@ module.exports = {
 
       const { latitude: userLat, longitude: userLng } = userAddress;
 
-      const { coords } = restaurant;
+      const { coords } = store;
 
       // Validate if coords is an object and contains latitude and longitude
       if (
@@ -595,11 +556,11 @@ module.exports = {
       ) {
         return res.status(400).json({
           status: false,
-          message: "Invalid restaurant coordinates.",
+          message: "Invalid store coordinates.",
         });
       }
 
-      const { latitude: restaurantLat, longitude: restaurantLng } = coords;
+      const { latitude: storeLat, longitude: storeLng } = coords;
 
       // Function to calculate distance in KM using Haversine formula
       function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -620,33 +581,27 @@ module.exports = {
         return (degrees * Math.PI) / 180;
       }
 
-      const distance = calculateDistance(
-        userLat,
-        userLng,
-        restaurantLat,
-        restaurantLng
-      );
+      const distance = calculateDistance(userLat, userLng, storeLat, storeLng);
       if (distance > 10) {
         return res.status(400).json({
           status: false,
           message:
-            "The restaurant is too far from your delivery address. Please choose a closer restaurant.",
+            "The store is too far from your delivery address. Please choose a closer store.",
         });
       }
 
-      // Check if the restaurant is active and available
-      if (!restaurant.isActive) {
+      // Check if the store is active and available
+      if (!store.isActive) {
         return res.status(400).json({
           status: false,
-          message: "Restaurant is closed",
+          message: `${storeType} is closed`,
         });
       }
 
-      if (!restaurant.isAvailable) {
+      if (!store.isAvailable) {
         return res.status(400).json({
           status: false,
-          message:
-            "Restaurant is currently not accepting orders. Please try again later.",
+          message: `${storeType} is currently not accepting orders. Please try again later.`,
         });
       }
 
@@ -658,32 +613,39 @@ module.exports = {
         });
       }
 
-      // Check availability of food items
-      const foodIds = orderItems.map((item) => item.foodId);
-      const foods = await Food.find({ _id: { $in: foodIds } });
+      // Check availability of products (Food or Grocery)
+      const productIds = orderItems.map((item) => item.productId);
+      const products = await Promise.all(
+        orderItems.map(
+          (item) =>
+            item.itemType === "Food"
+              ? Food.find({ _id: { $in: productIds } })
+              : Grocery.find({ _id: { $in: productIds } }) // Replace with actual grocery model
+        )
+      );
 
-      const unavailableFoods = foods
-        .filter((food) => !food.isAvailable)
-        .map((food) => food.title);
+      const unavailableProducts = products
+        .filter((product) => !product.isAvailable)
+        .map((product) => product.title);
 
-      if (unavailableFoods.length > 0) {
+      if (unavailableProducts.length > 0) {
         if (orderItems.length === 1) {
           // Single item order
           return res.status(400).json({
             status: false,
-            message: `The item '${unavailableFoods[0]}' is not available at the moment. Please try again later.`,
+            message: `The item '${unavailableProducts[0]}' is not available at the moment. Please try again later.`,
           });
-        } else if (unavailableFoods.length === 1) {
+        } else if (unavailableProducts.length === 1) {
           // Multiple items with one unavailable
           return res.status(400).json({
             status: false,
-            message: `The item '${unavailableFoods[0]}' is not available at the moment. Please remove it from your cart to proceed.`,
+            message: `The item '${unavailableProducts[0]}' is not available at the moment. Please remove it from your cart to proceed.`,
           });
         } else {
           // Multiple items with multiple unavailable
           return res.status(400).json({
             status: false,
-            message: `The following items are not available: ${unavailableFoods.join(
+            message: `The following items are not available: ${unavailableProducts.join(
               ", "
             )}. Please remove them from your cart to proceed.`,
           });
@@ -693,7 +655,7 @@ module.exports = {
       // Create order
       const order = new Order({
         ...req.body,
-        restaurantSecretCode: generateSecretCode(),
+        storeSecretCode: generateSecretCode(),
         riderSecretCode: generateSecretCode(),
       });
 
@@ -845,7 +807,7 @@ module.exports = {
     const userId = req.user.id;
     try {
       const orders = await Order.find({ userId })
-        .populate("restaurantId")
+        .populate("storeId")
         .populate({
           path: "assignedRider",
           select: "vehicleType vehicleBrand plateNumber imageUrl point",
@@ -888,33 +850,31 @@ module.exports = {
   updateOrderStatus: async (req, res) => {
     const { id: orderId, status: orderStatus } = req.params;
     const { userId, riderResponse, secretCode } = req.body;
-
     const modifierId = req.user.id;
 
     try {
-      const user = await User.findById(userId).select("expoPushToken");
+      const user = await User.findById(userId).select(
+        "expoPushToken email firstName"
+      );
 
       let updateFields = { orderStatus };
       const currentTime = new Date();
-      const order = await Order.findById(orderId);
+      const order = await Order.findById(orderId).populate({
+        path: "storeId",
+        select: "owner",
+      });
 
-      if (!order) {
+      if (!order || !order.storeId) {
         return res
           .status(404)
-          .json({ status: false, message: "Order not found" });
+          .json({ status: false, message: "Order or store not found" });
       }
 
-      // Check if the modifier is the restaurant owner
-      const restaurant = await Restaurant.findOne({ owner: modifierId });
-      const isRestaurantOwner =
-        restaurant && restaurant._id.equals(order.restaurantId);
-
-      // Check if the modifier is the assigned rider
+      const isStoreOwner = order.storeId.owner.equals(modifierId);
       const rider = await Rider.findOne({ riderProfile: modifierId });
       const isAssignedRider = rider && rider._id.equals(order.assignedRider);
 
-      // Verify if the modifier is either the restaurant owner or assigned rider
-      if (!isRestaurantOwner && !isAssignedRider) {
+      if (!isStoreOwner && !isAssignedRider) {
         return res.status(403).json({
           status: false,
           message: "You are not authorized to update this order.",
@@ -925,63 +885,46 @@ module.exports = {
         case "Preparing":
           updateFields.preparingTime = currentTime;
           updateFields.progressSteps = 1;
-
           await sendPushNotification(
             [user.expoPushToken],
             "Order Update",
             "Your order is now being prepared."
           );
-
           break;
+
         case "Ready":
           updateFields.readyTime = currentTime;
           updateFields.progressSteps = 2;
-          // Automatically assign the order to a rider once it's ready
-          console.log("assigning order before");
           const assignResult = await module.exports.assignOrderToRider(
             orderId,
             req
           );
-
-          const backdatedTime = new Date(
-            currentTime.getTime() - 10 * 60 * 1000
-          ); // Subtract 3 minutes
           if (
             !assignResult.status &&
             order.previouslyAssignedRiders?.length === 0
           ) {
             updateFields.orderStatus = "Ready";
-            // updateFields.riderAssignedTime = backdatedTime;
           } else if (!assignResult.status) {
             return res.status(500).json(assignResult);
           }
-          console.log("assigning order after");
-
           await sendPushNotification(
             [user.expoPushToken],
             "Order Update",
             "Your order is ready and has been assigned to a rider."
           );
           break;
+
         case "Rider Assigned":
           if (riderResponse === "accept") {
             updateFields.orderStatus = "Rider Accepted Order";
             updateFields.riderAcceptedTime = currentTime;
             updateFields.progressSteps = 3;
-            // await order.save();
-
-            // return res.status(200).json({
-            //   status: true,
-            //   message: "Rider accepted the order",
-            //   data: order,
-            // });
             await sendPushNotification(
               [user.expoPushToken],
               "Order Update",
               "A rider has accepted your order."
             );
           } else if (riderResponse === "decline") {
-            // Reassign the order to another rider
             await module.exports.reassignOrder(
               order._id,
               order.assignedRider,
@@ -997,8 +940,6 @@ module.exports = {
         case "Out for Delivery":
           updateFields.inTransitTime = currentTime;
           updateFields.progressSteps = 4;
-
-          // Process restaurant's payment
           await processRestaurantPayment(order);
           await sendPushNotification(
             [user.expoPushToken],
@@ -1006,18 +947,18 @@ module.exports = {
             "Your order is out for delivery."
           );
           break;
+
         case "Arrived":
           updateFields.arrivalTime = currentTime;
           updateFields.progressSteps = 5;
-
           await sendPushNotification(
             [user.expoPushToken],
             "Order Update",
             "Your order has arrived."
           );
           break;
+
         case "Delivered":
-          // Validate rider secret code
           if (secretCode !== order.riderSecretCode) {
             return res.status(400).json({
               status: false,
@@ -1025,13 +966,10 @@ module.exports = {
                 "Invalid secret code. Order cannot be marked as delivered.",
             });
           }
-
           updateFields.deliveryTime = currentTime;
           updateFields.progressSteps = 6;
-
           await processRiderPayment(order);
 
-          // Update the rider's availability and assigned orders
           if (order.assignedRider) {
             await Rider.findByIdAndUpdate(order.assignedRider, {
               isAvailable: true,
@@ -1045,14 +983,10 @@ module.exports = {
             "Your order has been delivered. Thank you for choosing our service! 😎"
           );
 
-          // Check if this is the user's first order
           const userOrders = await Order.find({ userId });
           if (userOrders.length === 1) {
             await sendFirstOrderThankYouEmail(user.email, user.firstName);
           }
-
-          break;
-        default:
           break;
       }
 
@@ -1061,7 +995,7 @@ module.exports = {
         updateFields,
         { new: true }
       )
-        .populate("restaurantId")
+        .populate("storeId")
         .populate({
           path: "assignedRider",
           select: "vehicleType vehicleBrand plateNumber imageUrl point",
@@ -1079,19 +1013,6 @@ module.exports = {
           ).select("firstName lastName email phone userType profile");
         }
 
-        // res.status(200).json({
-        //   status: true,
-        //   message: "Order status updated successfully",
-        //   data: { order: updatedOrder, rider },
-        // });
-
-        // const { userSocketMap, io } = req;
-        // const customerSocketId = userSocketMap[userId];
-
-        // if (customerSocketId) {
-        //   io.to(customerSocketId).emit("newStatus", { order: updatedOrder, rider });
-        // }
-
         res.status(200).json({
           status: true,
           message: "Order status updated successfully",
@@ -1099,68 +1020,68 @@ module.exports = {
         });
 
         const { userSocketMap, io } = req;
-
         const customerSocketId = userSocketMap[userId];
 
         console.log("userId from controller", userId);
 
         if (customerSocketId) {
           console.log(
-            "emitting recieveOrderStatus event to the customer",
+            "Emitting receiveOrderStatus event to the customer",
             userId
           );
           io.to(customerSocketId).emit("newStatus", updatedOrder);
         } else {
-          console.log("client socekt ID not found");
+          console.log("Client socket ID not found");
         }
-      } else {
-        res.status(404).json({ status: false, message: "Order not found" });
       }
     } catch (error) {
-      res.status(500).json(error);
       console.log(error);
+      res.status(500).json({ status: false, error });
     }
   },
 
   assignOrderToRider: async (orderId, req) => {
     try {
-      const order = await Order.findById(orderId).populate("restaurantId");
+      const order = await Order.findById(orderId).populate("storeId");
       if (!order) {
         throw new Error("Order not found");
       }
 
-      // console.log(order, orderId);
+      const storeId = order.storeId._id;
+      const storeType = order.storeType;
 
-      const restaurantId = order.restaurantId._id;
+      // Find the store based on storeType
+      const store =
+        storeType === "Restaurant"
+          ? await Restaurant.findById(storeId)
+          : await GroceryStore.findById(storeId);
 
-      // Find the restaurant by restaurantId
-      const restaurant = await Restaurant.findById(restaurantId);
-      if (!restaurant) {
-        throw new Error("Restaurant not found");
+      if (!store) {
+        throw new Error(`${storeType} not found`);
       }
 
-      const restaurantLocation = restaurant.location.coordinates;
+      const storeLocation = store.location.coordinates;
 
-      console.log(restaurantId, restaurantLocation);
+      console.log(storeId, storeLocation);
 
-      // Find the nearest available rider within a radius (e.g., 5 km),
-      // excluding riders who were previously assigned
+      // Find the nearest available rider within a 5 km radius,
+      // excluding previously assigned riders
       const availableRiders = await Rider.find({
         isAvailable: true,
         isActive: true,
         isTakingOrders: true,
         verification: "Verified",
-        _id: { $nin: order.previouslyAssignedRiders || [] }, // Exclude previously assigned riders
+        _id: { $nin: order.previouslyAssignedRiders || [] },
         point: {
           $near: {
-            $geometry: { type: "Point", coordinates: restaurantLocation },
+            $geometry: { type: "Point", coordinates: storeLocation },
             $maxDistance: 5000, // 5 km radius
-            $minDistance: 0, // Optionally, you can set a minimum distance
+            $minDistance: 0,
           },
         },
       }).limit(1);
 
-      console.log("available rider: ", availableRiders);
+      console.log("Available rider: ", availableRiders);
 
       if (availableRiders.length === 0) {
         // No available riders: Set status to "Ready" and backdate riderAssignedTime
@@ -1176,12 +1097,12 @@ module.exports = {
 
       const assignedRider = availableRiders[0];
 
-      console.log("assignedRider: ", assignedRider);
+      console.log("Assigned Rider: ", assignedRider);
 
       // Assign rider to order and update status
       order.assignedRider = assignedRider._id;
       order.orderStatus = "Rider Assigned";
-      order.riderAssignedTime = new Date(); // Set the time the rider was assigned
+      order.riderAssignedTime = new Date();
       await order.save();
 
       // Update rider's status and save
@@ -1195,7 +1116,7 @@ module.exports = {
         paymentStatus: "Completed",
       })
         .select(
-          "userId deliveryAddress orderItems deliveryFee restaurantId orderStatus restaurantCoords recipientCoords paymentStatus orderDate restaurantSecretCode riderSecretCode updatedAt assignedRider readyTime riderAssignedTime riderAcceptedTime inTransitTime arrivalTime deliveryTime progressSteps"
+          "userId deliveryAddress orderItems deliveryFee storeId orderStatus storeType recipientCoords paymentStatus orderDate storeSecretCode riderSecretCode updatedAt assignedRider readyTime riderAssignedTime riderAcceptedTime inTransitTime arrivalTime deliveryTime progressSteps"
         )
         .populate({
           path: "assignedRider",
@@ -1210,15 +1131,15 @@ module.exports = {
           select: "phone profile firstName lastName email",
         })
         .populate({
-          path: "restaurantId",
+          path: "storeId",
           select: "title imageUrl logoUrl location coords",
           populate: {
-            path: "owner", // Populate the owner field
-            select: "phone firstName lastName email", // Select the owner's details
+            path: "owner",
+            select: "phone firstName lastName email",
           },
         })
         .populate({
-          path: "orderItems.foodId",
+          path: "orderItems.productId",
           select: "title imageUrl time",
         })
         .populate({
@@ -1230,16 +1151,16 @@ module.exports = {
       const { userSocketMap, io } = req;
       const riderSocketId = userSocketMap[assignedRider._id];
 
-      console.log("rider Id", assignedRider._id);
+      console.log("Rider ID", assignedRider._id);
 
       if (riderSocketId) {
         console.log(
-          "emitting recieveRiderOrder event to the rider",
+          "Emitting receiveRiderOrder event to the rider",
           assignedRider._id
         );
         io.to(riderSocketId).emit("newRiderOrder", parcels);
       } else {
-        console.log("rider socket ID not found");
+        console.log("Rider socket ID not found");
       }
 
       const riderPushToken = parcels.assignedRider.riderProfile?.expoPushToken;
@@ -1365,112 +1286,100 @@ module.exports = {
       status = ["Out for Delivery", "Arrived"];
     } else if (req.query.status === "delivered") {
       status = "Delivered";
-    } else if (req.query.status === "manual") {
-      status = "Manual";
-    } else if (req.query.status === "cancelled") {
-      status = "Cancelled";
     }
+
     try {
-      const parcels = await Order.find({
+      const orders = await Order.find({
         orderStatus: Array.isArray(status) ? { $in: status } : status,
-        restaurantId: req.params.id,
+        storeId: req.params.id,
         $or: [{ paymentStatus: "Completed" }, { paymentStatus: "Pending" }],
       })
         .select(
-          "userId deliveryAddress orderItems deliveryFee restaurantId orderStatus restaurantCoords recipientCoords paymentStatus orderDate restaurantSecretCode riderSecretCode updatedAt assignedRider readyTime riderAssignedTime riderAcceptedTime inTransitTime arrivalTime deliveryTime progressSteps"
+          "userId deliveryAddress orderItems deliveryFee storeId storeType orderStatus paymentStatus orderDate storeSecretCode riderSecretCode updatedAt assignedRider readyTime riderAssignedTime riderAcceptedTime inTransitTime arrivalTime deliveryTime progressSteps"
         )
         .populate({
           path: "assignedRider",
           select: "vehicleType vehicleBrand plateNumber imageUrl point",
-          populate: {
-            path: "riderProfile",
-            select: "phone firstName lastName email",
-          },
         })
+        .populate({ path: "userId", select: "phone profile" })
         .populate({
-          path: "userId",
-          select: "phone profile",
-        })
-        .populate({
-          path: "restaurantId",
+          path: "storeId",
           select: "title imageUrl logoUrl time",
+          model: req.query.storeType,
         })
         .populate({
-          path: "orderItems.foodId",
+          path: "orderItems.productId",
           select: "title imageUrl time",
+          model: "Food",
+        })
+        .populate({
+          path: "orderItems.productId",
+          select: "title imageUrl",
+          model: "Grocery",
         })
         .populate({
           path: "deliveryAddress",
           select: "addressLine1 latitude longitude",
         });
 
-      res.status(200).json(parcels);
+      res.status(200).json(orders);
     } catch (error) {
-      res.status(500).json({
-        status: false,
-        message: "Error retrieving parcels",
-        error: error.message,
-      });
+      res
+        .status(500)
+        .json({
+          status: false,
+          message: "Error retrieving orders",
+          error: error.message,
+        });
     }
   },
 
   getRiderOrdersList: async (req, res) => {
     const riderProfile = req.user.id;
-    // let status;
-    // if (req.query.status === "Ready") {
-    //   status = "Ready";
-    // } else if (req.query.status === "Rider Assigned") {
-    //   status = "Rider Assigned";
-    // } else if (req.query.status === "Rider Accepted Order") {
-    //   status = "Rider Accepted Order";
-    // } else if (req.query.status === "Out for Delivery") {
-    //   status = "Out for Delivery";
-    // } else if (req.query.status === "Arrived") {
-    //   status = "Arrived";
-    // } else if (req.query.status === "delivered") {
-    //   status = "Delivered";
-    // }
 
     try {
       const rider = await Rider.findOne({ riderProfile: riderProfile });
-
       if (!rider) {
-        return res.status(404).json({
-          status: false,
-          message: "Rider profile not found",
-        });
+        return res
+          .status(404)
+          .json({ status: false, message: "Rider profile not found" });
       }
-      const parcels = await Order.find({
+
+      const orders = await Order.find({
         orderStatus: { $nin: ["Placed", "Preparing", "Delivered"] },
         assignedRider: rider._id,
         paymentStatus: "Completed",
       })
         .select(
-          "userId deliveryAddress orderItems deliveryFee restaurantId orderStatus restaurantCoords recipientCoords paymentStatus orderDate restaurantSecretCode riderSecretCode updatedAt assignedRider readyTime riderAssignedTime riderAcceptedTime inTransitTime arrivalTime deliveryTime progressSteps"
+          "userId deliveryAddress orderItems deliveryFee storeId storeType orderStatus paymentStatus orderDate storeSecretCode riderSecretCode updatedAt assignedRider readyTime riderAssignedTime riderAcceptedTime inTransitTime arrivalTime deliveryTime progressSteps"
         )
         .populate({
           path: "assignedRider",
           select: "vehicleType vehicleBrand plateNumber imageUrl point",
-          populate: {
-            path: "riderProfile",
-            select: "phone firstName lastName email",
-          },
         })
         .populate({
           path: "userId",
           select: "phone profile firstName lastName email",
         })
         .populate({
-          path: "restaurantId",
+          path: "storeId",
           select: "title imageUrl logoUrl location coords",
-          populate: {
-            path: "owner", // Populate the owner field
-            select: "phone firstName lastName email", // Select the owner's details
-          },
+          model: "Restaurant",
         })
         .populate({
-          path: "orderItems.foodId",
+          path: "storeId",
+          select: "title imageUrl logoUrl location coords",
+          model: "GroceryStore",
+        })
+        .populate({
+          path: "orderItems.productId",
           select: "title imageUrl time",
+          model: "Food",
+        })
+        .populate({
+          path: "orderItems.productId",
+          select: "title imageUrl",
+          model: "Grocery",
         })
         .populate({
           path: "deliveryAddress",
@@ -1478,13 +1387,15 @@ module.exports = {
             "addressLine1 latitude longitude postalCode deliveryInstructions",
         });
 
-      res.status(200).json(parcels);
+      res.status(200).json(orders);
     } catch (error) {
-      res.status(500).json({
-        status: false,
-        message: "Error retrieving parcels",
-        error: error.message,
-      });
+      res
+        .status(500)
+        .json({
+          status: false,
+          message: "Error retrieving orders",
+          error: error.message,
+        });
     }
   },
 
@@ -1613,11 +1524,11 @@ module.exports = {
       // Find the order with detailed population
       const order = await Order.findOne({ _id: orderId, userId })
         .populate({
-          path: "orderItems.foodId",
+          path: "orderItems.productId",
           select: "rating ratingCount imageUrl title description",
         })
         .populate({
-          path: "restaurantId",
+          path: "storeId",
           select:
             "title logoUrl coords rating ratingCount openingTime closingTime foods pickup delivery owner isAvailable verification verificationMessage code distance location coords imageUrl",
         });
@@ -1642,14 +1553,15 @@ module.exports = {
         orderDate: order.orderDate,
         orderItems: order.orderItems.map((item) => ({
           _id: item._id,
-          additives: item.additives || [], // Assuming this field may not always be present
-          foodId: item.foodId._id,
-          imageUrl: item.foodId.imageUrl,
-          instructions: item.instructions || "",
+          productId: item.productId._id,
+          itemType: item.itemType,
+          imageUrl: item.productId.imageUrl,
+          title: item.title,
           price: item.price,
           quantity: item.quantity,
           time: item.time || "",
-          title: item.title,
+          additives: item.additives || [],
+          instructions: item.instructions || "",
           rating: item.rating,
           feedback: item.feedback,
           rated: item.rated,
@@ -1662,31 +1574,31 @@ module.exports = {
         progressSteps: order.progressSteps || 1,
         readyTime: order.readyTime,
         referredBy: order.referredBy || null,
-        restaurantId: {
-          __v: order.restaurantId.__v,
-          _id: order.restaurantId._id,
-          closingTime: order.restaurantId.closingTime,
-          code: order.restaurantId.code,
-          coords: order.restaurantId.coords,
-          createdAt: order.restaurantId.createdAt,
-          delivery: order.restaurantId.delivery,
-          foods: order.restaurantId.foods,
-          imageUrl: order.restaurantId.imageUrl,
-          isAvailable: order.restaurantId.isAvailable,
-          location: order.restaurantId.location,
-          logoUrl: order.restaurantId.logoUrl,
-          openingTime: order.restaurantId.openingTime,
-          owner: order.restaurantId.owner,
-          pickup: order.restaurantId.pickup,
-          rating: order.restaurantId.rating,
-          ratingCount: order.restaurantId.ratingCount,
-          restaurantDoc: order.restaurantId.restaurantDoc || "", // Assuming this field may not always be present
-          title: order.restaurantId.title,
-          updatedAt: order.restaurantId.updatedAt,
-          verification: order.restaurantId.verification,
-          verificationMessage: order.restaurantId.verificationMessage,
+        storeId: {
+          __v: order.storeId.__v,
+          _id: order.storeId._id,
+          closingTime: order.storeId.closingTime,
+          code: order.storeId.code,
+          coords: order.storeId.coords,
+          createdAt: order.storeId.createdAt,
+          delivery: order.storeId.delivery,
+          foods: order.storeId.foods,
+          imageUrl: order.storeId.imageUrl,
+          isAvailable: order.storeId.isAvailable,
+          location: order.storeId.location,
+          logoUrl: order.storeId.logoUrl,
+          openingTime: order.storeId.openingTime,
+          owner: order.storeId.owner,
+          pickup: order.storeId.pickup,
+          rating: order.storeId.rating,
+          ratingCount: order.storeId.ratingCount,
+          storeDoc: order.storeId.storeDoc || "", // Assuming this field may not always be present
+          title: order.storeId.title,
+          updatedAt: order.storeId.updatedAt,
+          verification: order.storeId.verification,
+          verificationMessage: order.storeId.verificationMessage,
         },
-        restaurantSecretCode: order.restaurantSecretCode || "",
+        storeSecretCode: order.storeSecretCode || "",
         riderSecretCode: order.riderSecretCode || "",
         updatedAt: order.updatedAt,
         userId: order.userId,

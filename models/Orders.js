@@ -2,18 +2,27 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const orderItemSchema = new mongoose.Schema({
-  foodId: { type: mongoose.Schema.Types.ObjectId, ref: "Food" },
+  productId: {
+    type: mongoose.Schema.Types.ObjectId,
+    refPath: "orderItems.itemType",
+    required: true,
+  }, // References either Food or Grocery
+  itemType: {
+    type: String,
+    enum: ["Food", "Grocery"],
+    required: true,
+  }, // Determines the model of productId
   quantity: { type: Number, required: true },
   price: { type: Number, required: true },
-  additives: { type: Array },
-  instructions: { type: String, default: "" },
+  additives: { type: Array }, // Optional for groceries
+  instructions: { type: String, default: "" }, // Optional for groceries
   title: { type: String, required: true },
   imageUrl: { type: String, required: true },
-  time: { type: String, required: true },
-  rating: { type: Number, required: false },
-  feedback: { type: String, required: false },
+  time: { type: String }, // Can be food preparation time or grocery delivery estimate
+  rating: { type: Number },
+  feedback: { type: String },
   rated: { type: Boolean, default: false },
-  feedbackId: { type: Schema.Types.ObjectId, ref: "Feedback", required: false },
+  feedbackId: { type: Schema.Types.ObjectId, ref: "Feedback" },
 });
 
 const orderSchema = new mongoose.Schema(
@@ -23,6 +32,16 @@ const orderSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    storeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      refPath: "storeType",
+      required: true,
+    }, // References either Restaurant or GroceryStore
+    storeType: {
+      type: String,
+      enum: ["Restaurant", "GroceryStore"],
+      required: true,
+    }, // Determines which store type storeId references
     orderItems: [orderItemSchema],
     orderTotal: { type: Number, required: true },
     deliveryFee: { type: Number, required: true },
@@ -53,34 +72,22 @@ const orderSchema = new mongoose.Schema(
       ],
     },
     orderDate: { type: Date, default: Date.now },
-    restaurantId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Restaurant",
-      required: true,
-    },
-    freeDelivery: { type: Boolean, default: false, required: true },
+    freeDelivery: { type: Boolean, default: false },
     assignedRider: { type: mongoose.Schema.Types.ObjectId, ref: "Rider" },
-    riderRating: { type: Number, required: false },
-    riderFeedback: { type: String, required: false },
+    riderRating: { type: Number },
+    riderFeedback: { type: String },
     riderRated: { type: Boolean, default: false },
-    riderFeedbackId: {
-      type: Schema.Types.ObjectId,
-      ref: "Feedback",
-      required: false,
-    },
+    riderFeedbackId: { type: Schema.Types.ObjectId, ref: "Feedback" },
     previouslyAssignedRiders: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Rider",
-      },
+      { type: mongoose.Schema.Types.ObjectId, ref: "Rider" },
     ],
     rating: { type: Number, min: 1, max: 5 },
-    feedback: String,
-    promoCode: String,
-    discountAmount: Number,
+    feedback: { type: String, default: "" },
+    promoCode: { type: String },
+    discountAmount: { type: Number },
     referredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    notes: String,
-    restaurantSecretCode: { type: String, required: true },
+    notes: { type: String },
+    storeSecretCode: { type: String, required: true },
     riderSecretCode: { type: String, required: true },
     preparingTime: { type: Date },
     readyTime: { type: Date },
@@ -91,7 +98,6 @@ const orderSchema = new mongoose.Schema(
     deliveryTime: { type: Date },
     progressSteps: { type: Number },
     rated: { type: Boolean, default: false },
-    feedback: { type: String, default: "" },
   },
   { timestamps: true }
 );
