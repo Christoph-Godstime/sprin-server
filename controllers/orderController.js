@@ -266,14 +266,16 @@ module.exports = {
 
         const updatedOrder = await Order.findById(orderId)
           .select(
-            "userId deliveryAddress orderItems deliveryFee storeId orderStatus storeCoords recipientCoords paymentStatus orderDate storeSecretCode riderSecretCode updatedAt freeDelivery"
+            "userId deliveryAddress orderItems deliveryFee storeId storeType orderStatus storeCoords recipientCoords paymentStatus orderDate storeSecretCode riderSecretCode updatedAt freeDelivery"
           )
           .populate({ path: "userId", select: "phone profile" })
           .populate({
             path: "storeId",
+
             select: "title imageUrl logoUrl time",
             populate: {
               path: "owner",
+
               select: "expoPushToken firstName lastName phone",
             },
           })
@@ -286,13 +288,7 @@ module.exports = {
             select: "addressLine1 latitude longitude",
           });
 
-        if (!updatedOrder) {
-          throw new Error("Order not found");
-        }
-
-        // Extract store owner's push token dynamically
-        const storeOwnerPushToken =
-          updatedOrder.storeId?.owner?.expoPushToken || null;
+        const storeOwnerPushToken = updatedOrder.storeId.owner?.expoPushToken;
 
         if (storeOwnerPushToken) {
           await sendPushNotification(
@@ -401,7 +397,7 @@ module.exports = {
 
       const updatedOrder = await Order.findById(orderId)
         .select(
-          "userId deliveryAddress orderItems deliveryFee storeId orderStatus storeCoords recipientCoords paymentStatus orderDate storeSecretCode riderSecretCode updatedAt freeDelivery"
+          "userId deliveryAddress orderItems deliveryFee storeId storeType orderStatus storeCoords recipientCoords paymentStatus orderDate storeSecretCode riderSecretCode updatedAt freeDelivery"
         )
         .populate({ path: "userId", select: "phone profile" })
         .populate({
@@ -483,6 +479,8 @@ module.exports = {
       } catch (error) {
         console.error("Error fetching admin push tokens:", error.message);
       }
+
+      console.log("order date: ", updatedOrder.orderDate);
 
       if (adminPushTokens.length > 0) {
         try {

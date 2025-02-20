@@ -89,37 +89,34 @@ exports.rollBackDate = (number_of_months) => {
   return result;
 };
 
+exports.convertToNigerianTime = (utcDateString) => {
+  const utcDate = new Date(utcDateString); // Parse the given date
+  const options = {
+    timeZone: "Africa/Lagos", // Nigerian time zone
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+  };
+  const formatter = new Intl.DateTimeFormat("en-NG", options);
+  return formatter.format(utcDate); // Return the formatted date
+};
+
 exports.shuffle = (array) => {
   let currentIndex = array.length,
     randomIndex;
 
-  // While there remain elements to shuffle...
   while (currentIndex != 0) {
-    // Pick a remaining element...
     randomIndex = Math.floor(Math.random() * currentIndex);
     currentIndex--;
 
-    // And swap it with the current element.
     [array[currentIndex], array[randomIndex]] = [
       array[randomIndex],
       array[currentIndex],
     ];
   }
-
-  exports.convertToNigerianTime = (utcDateString) => {
-    const utcDate = new Date(utcDateString); // Parse the given date
-    const options = {
-      timeZone: "Africa/Lagos", // Nigerian time zone
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "numeric",
-      minute: "numeric",
-      second: "numeric",
-    };
-    const formatter = new Intl.DateTimeFormat("en-NG", options);
-    return formatter.format(utcDate); // Return the formatted date
-  };
 
   return array;
 };
