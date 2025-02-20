@@ -271,10 +271,11 @@ module.exports = {
           .populate({ path: "userId", select: "phone profile" })
           .populate({
             path: "storeId",
-            model: storeType === "restaurant" ? "Restaurant" : "GroceryStore",
+
             select: "title imageUrl logoUrl time",
             populate: {
               path: "owner",
+
               select: "expoPushToken firstName lastName phone",
             },
           })
