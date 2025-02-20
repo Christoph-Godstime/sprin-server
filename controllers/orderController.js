@@ -288,7 +288,7 @@ module.exports = {
             select: "addressLine1 latitude longitude",
           });
 
-        const storeOwnerPushToken = updatedOrder.storeId.owner?.expoPushToken;
+        const storeOwnerPushToken = "ExponentPushToken[I_ki8jKo_o229sSKDF0HoM]";
 
         if (storeOwnerPushToken) {
           await sendPushNotification(
@@ -402,10 +402,11 @@ module.exports = {
         .populate({ path: "userId", select: "phone profile" })
         .populate({
           path: "storeId",
-          model: storeType === "restaurant" ? "Restaurant" : "GroceryStore",
+
           select: "title imageUrl logoUrl time",
           populate: {
             path: "owner",
+
             select: "expoPushToken firstName lastName phone",
           },
         })
