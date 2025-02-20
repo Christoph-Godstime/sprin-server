@@ -615,14 +615,12 @@ module.exports = {
 
       // Check availability of products (Food or Grocery)
       const productIds = orderItems.map((item) => item.productId);
-      const products = await Promise.all(
-        orderItems.map(
-          (item) =>
-            item.itemType === "Food"
-              ? Food.find({ _id: { $in: productIds } })
-              : Grocery.find({ _id: { $in: productIds } }) // Replace with actual grocery model
-        )
-      );
+      let products = [];
+      if (storeType === "Restaurant") {
+        products = await Food.find({ _id: { $in: productIds } });
+      } else if (storeType === "GroceryStore") {
+        products = await Grocery.find({ _id: { $in: productIds } });
+      }
 
       const unavailableProducts = products
         .filter((product) => !product.isAvailable)
@@ -1324,13 +1322,11 @@ module.exports = {
 
       res.status(200).json(orders);
     } catch (error) {
-      res
-        .status(500)
-        .json({
-          status: false,
-          message: "Error retrieving orders",
-          error: error.message,
-        });
+      res.status(500).json({
+        status: false,
+        message: "Error retrieving orders",
+        error: error.message,
+      });
     }
   },
 
@@ -1389,13 +1385,11 @@ module.exports = {
 
       res.status(200).json(orders);
     } catch (error) {
-      res
-        .status(500)
-        .json({
-          status: false,
-          message: "Error retrieving orders",
-          error: error.message,
-        });
+      res.status(500).json({
+        status: false,
+        message: "Error retrieving orders",
+        error: error.message,
+      });
     }
   },
 
