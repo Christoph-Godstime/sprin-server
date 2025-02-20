@@ -271,11 +271,9 @@ module.exports = {
           .populate({ path: "userId", select: "phone profile" })
           .populate({
             path: "storeId",
-
             select: "title imageUrl logoUrl time",
             populate: {
               path: "owner",
-
               select: "expoPushToken firstName lastName phone",
             },
           })
@@ -288,7 +286,13 @@ module.exports = {
             select: "addressLine1 latitude longitude",
           });
 
-        const storeOwnerPushToken = "ExponentPushToken[I_ki8jKo_o229sSKDF0HoM]";
+        if (!updatedOrder) {
+          throw new Error("Order not found");
+        }
+
+        // Extract store owner's push token dynamically
+        const storeOwnerPushToken =
+          updatedOrder.storeId?.owner?.expoPushToken || null;
 
         if (storeOwnerPushToken) {
           await sendPushNotification(
