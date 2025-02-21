@@ -108,7 +108,6 @@ module.exports = {
     try {
       let discountAmount = 0;
       let walletBalance = 0;
-      let grandTotal = orderTotal + deliveryFee;
       let referrerId = null;
       let freeDelivery = false;
 
@@ -122,8 +121,11 @@ module.exports = {
       // Helper function to round to the nearest ten
       const roundToNearestTen = (value) => Math.ceil(value / 10) * 10;
 
+      // Ensure minimum delivery fee is 500
+      const normalDeliveryFee = deliveryFee < 500 ? 500 : deliveryFee;
+
       // Round up deliveryFee to the nearest ten
-      const roundedDeliveryFee = roundToNearestTen(deliveryFee);
+      const roundedDeliveryFee = roundToNearestTen(normalDeliveryFee);
 
       // Fetch user wallet balance
       const user = await User.findById(userId);
@@ -150,10 +152,6 @@ module.exports = {
           parseFloat((roundedDeliveryFee * 0.85).toFixed(2))
         );
       }
-
-      // const riderDeliveryFee = roundToNearestTen(
-      //   parseFloat((discountedDeliveryFee * 0.85).toFixed(2))
-      // );
 
       const riderDeliveryFee = roundToNearestTen(
         parseFloat((roundedDeliveryFee * 0.85).toFixed(2))
@@ -191,10 +189,19 @@ module.exports = {
         }
       }
 
+      // Calculate Service Fee (3% of orderTotal)
+      const serviceFee = parseFloat((orderTotal * 0.03).toFixed(2));
+
+      let grandTotal =
+        orderTotal +
+        parseFloat(discountedDeliveryFee) +
+        serviceFee -
+        discountAmount;
+
       // Handle wallet balance
+      let walletAmountUsed = 0;
       if (useWallet && walletBalance > 0) {
-        const totalWithDiscount =
-          orderTotal + parseFloat(discountedDeliveryFee) - discountAmount;
+        const totalWithDiscount = grandTotal;
 
         if (walletBalance >= totalWithDiscount) {
           walletAmountUsed = totalWithDiscount;
@@ -207,10 +214,6 @@ module.exports = {
           walletBalance = 0;
           partialWalletPayment = true;
         }
-      } else {
-        walletAmountUsed = 0;
-        grandTotal =
-          orderTotal + parseFloat(discountedDeliveryFee) - discountAmount;
       }
 
       if (grandTotal > 0) {
@@ -220,10 +223,11 @@ module.exports = {
       res.status(200).json({
         status: true,
         orderTotal,
-        normalDeliveryFee: deliveryFee,
+        normalDeliveryFee, // Minimum 500 enforced
         roundedDeliveryFee, // Rounded delivery fee
         discountedDeliveryFee, // Rounded discounted delivery fee
         riderDeliveryFee, // Rounded rider delivery fee
+        serviceFee, // 3% Service Fee
         freeDelivery,
         originalWalletBalance,
         walletBalance,
@@ -266,7 +270,7 @@ module.exports = {
 
         const updatedOrder = await Order.findById(orderId)
           .select(
-            "userId deliveryAddress orderItems deliveryFee storeId storeType orderStatus storeCoords recipientCoords paymentStatus orderDate storeSecretCode riderSecretCode updatedAt freeDelivery"
+            "userId deliveryAddress orderItems deliveryFee storeId storeType orderStatus storeCoords recipientCoords paymentStatus orderDate storeSecretCode riderSecretCode updatedAt freeDelivery serviceFee"
           )
           .populate({ path: "userId", select: "phone profile" })
           .populate({
@@ -342,6 +346,17 @@ module.exports = {
           );
         }
 
+        // Add service fee separately to company revenue balance
+        await CompanyRevenue.findOneAndUpdate(
+          {},
+          {
+            $inc: {
+              balance: Number(updatedOrder.serviceFee),
+            },
+          },
+          { new: true, upsert: true }
+        );
+
         let adminPushTokens = [];
         try {
           adminPushTokens = (await getAdminPushTokens()) || [];
@@ -397,7 +412,7 @@ module.exports = {
 
       const updatedOrder = await Order.findById(orderId)
         .select(
-          "userId deliveryAddress orderItems deliveryFee storeId storeType orderStatus storeCoords recipientCoords paymentStatus orderDate storeSecretCode riderSecretCode updatedAt freeDelivery"
+          "userId deliveryAddress orderItems deliveryFee storeId storeType orderStatus storeCoords recipientCoords paymentStatus orderDate storeSecretCode riderSecretCode updatedAt freeDelivery serviceFee"
         )
         .populate({ path: "userId", select: "phone profile" })
         .populate({
@@ -473,6 +488,17 @@ module.exports = {
         );
       }
 
+      // Add service fee separately to company revenue balance
+      await CompanyRevenue.findOneAndUpdate(
+        {},
+        {
+          $inc: {
+            balance: Number(updatedOrder.serviceFee),
+          },
+        },
+        { new: true, upsert: true }
+      );
+
       let adminPushTokens = [];
       try {
         adminPushTokens = (await getAdminPushTokens()) || [];
@@ -521,7 +547,16 @@ module.exports = {
 
   placeOrder: async (req, res) => {
     try {
-      const { storeId, storeType, orderItems } = req.body;
+      const { storeId, storeType, orderItems, orderTotal } = req.body;
+
+      // Check if orderTotal is below 1000
+      if (orderTotal < 1000) {
+        return res.status(400).json({
+          status: false,
+          message:
+            "The minimum order amount is ₦1,000. You cannot place an order below this amount. Please add more items to your cart to meet the minimum order requirement.",
+        });
+      }
 
       // Fetch the store based on storeId and storeType
       let store;

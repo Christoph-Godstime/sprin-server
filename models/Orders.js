@@ -43,6 +43,7 @@ const orderSchema = new mongoose.Schema(
       required: true,
     }, // Determines which store type storeId references
     orderItems: [orderItemSchema],
+    serviceFee: { type: Number, required: true },
     orderTotal: { type: Number, required: true },
     deliveryFee: { type: Number, required: true },
     grandTotal: { type: Number, required: true },

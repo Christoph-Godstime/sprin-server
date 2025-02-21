@@ -13,9 +13,17 @@ router.post(
   ordersController.calculateOrderDetails
 );
 
-router.post("/verify-payment", ordersController.verifyPayment);
+router.post(
+  "/verify-payment",
+  verifyTokenAndAuthorization,
+  ordersController.verifyPayment
+);
 
-router.post("/wallet-payment", ordersController.verifyWalletPayment);
+router.post(
+  "/wallet-payment",
+  verifyTokenAndAuthorization,
+  ordersController.verifyWalletPayment
+);
 
 router.post("/apply-coupon", ordersController.applyCoupon);
 
