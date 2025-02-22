@@ -259,6 +259,23 @@ module.exports = {
     }
   },
 
+  userGroceryCategories: async (req, res) => {
+    try {
+      const categories = await GroceryCategory.find({}, { __v: 0 });
+
+      // Shuffle the categories array
+      const shuffledCategories = categories.sort(() => Math.random() - 0.5);
+
+      res.status(200).json(shuffledCategories);
+    } catch (error) {
+      console.error("Error fetching grocery categories:", error);
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while fetching the grocery categories.",
+      });
+    }
+  },
+
   getSubcategoriesByCategoryId: async (req, res) => {
     try {
       const { categoryId } = req.params;

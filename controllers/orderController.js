@@ -189,8 +189,10 @@ module.exports = {
         }
       }
 
-      // Calculate Service Fee (3% of orderTotal)
-      const serviceFee = parseFloat((orderTotal * 0.03).toFixed(2));
+      // Calculate Service Fee (3% of orderTotal) and round up to nearest ten
+      const serviceFee = roundToNearestTen(
+        parseFloat((orderTotal * 0.03).toFixed(2))
+      );
 
       let grandTotal =
         orderTotal +
