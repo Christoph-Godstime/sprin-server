@@ -50,7 +50,7 @@ const { fireBaseConnection } = require("./utils/fbConnect");
 const dataBaseConnection = require("./utils/mongoConn");
 
 const http = require("http").createServer(app);
-const io = require("socket.io")(server, {
+const io = require("socket.io")(http, {
   cors: {
     origin: [
       "http://localhost:3000", // Development
