@@ -8,6 +8,7 @@ const allowedOrigins = [
   "http://localhost:3000", // Development
   "https://www.sprinapp.com", // Production
   "https://sprinapp.com",
+  "https://restaurant.sprinapp.com",
 ];
 
 app.use((req, res, next) => {
@@ -49,7 +50,18 @@ const { fireBaseConnection } = require("./utils/fbConnect");
 const dataBaseConnection = require("./utils/mongoConn");
 
 const http = require("http").createServer(app);
-const io = require("socket.io")(http);
+const io = require("socket.io")(server, {
+  cors: {
+    origin: [
+      "http://localhost:3000", // Development
+      "https://www.sprinapp.com", // Production
+      "https://sprinapp.com",
+      "https://restaurant.sprinapp.com",
+    ], // Allowed origins
+    methods: ["GET,POST,PUT,DELETE,PATCH,OPTIONS"], // Allowed methods
+    credentials: true, // Allow credentials (cookies, authentication)
+  },
+});
 
 // {"userId" : "socket ID"}
 
