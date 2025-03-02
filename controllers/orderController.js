@@ -1322,6 +1322,8 @@ module.exports = {
       status = "Placed";
     } else if (req.query.status === "preparing") {
       status = "Preparing";
+    } else if (req.query.status === "cancelled") {
+      status = "Cancelled";
     } else if (req.query.status === "ready") {
       status = ["Ready", "Rider Accepted Order", "Rider Assigned"];
     } else if (req.query.status === "out_for_delivery") {
