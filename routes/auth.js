@@ -20,4 +20,6 @@ router.post(
 router.post("/forgot-password", authController.forgotPassword);
 router.post("/reset-password", authController.resetPassword);
 
+router.get("/check-token", authController.checkTokenExpiration);
+
 module.exports = router;

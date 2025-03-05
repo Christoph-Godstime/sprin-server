@@ -197,7 +197,7 @@ module.exports = {
           email: user.email,
         },
         process.env.JWT_SEC,
-        { expiresIn: "21d" }
+        { expiresIn: "3m" }
       );
 
       const { password, ...others } = user._doc;
@@ -325,6 +325,38 @@ module.exports = {
         .json({ status: true, message: "Password reset successful!" });
     } catch (error) {
       res.status(500).json({ status: false, message: error.message });
+    }
+  },
+
+  checkTokenExpiration: async (req, res) => {
+    try {
+      const token = req.headers.authorization?.split(" ")[1]; // Extract token from headers
+
+      if (!token) {
+        return res
+          .status(401)
+          .json({ status: false, message: "No token provided" });
+      }
+
+      jwt.verify(token, process.env.JWT_SEC, (err, decoded) => {
+        if (err) {
+          if (err.name === "TokenExpiredError") {
+            return res
+              .status(401)
+              .json({ status: false, message: "Token expired" });
+          }
+          return res
+            .status(401)
+            .json({ status: false, message: "Invalid token" });
+        }
+
+        return res
+          .status(200)
+          .json({ status: true, message: "Token is valid", user: decoded });
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ status: false, message: "Internal Server Error" });
     }
   },
 };
