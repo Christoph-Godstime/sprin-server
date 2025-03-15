@@ -47,4 +47,6 @@ router.post("/contact_us", userController.contactUs);
 
 router.get("/ratePerKm", userController.getRatePerKm);
 
+router.get("/calculate-distance", userController.googleMapDistanceMatrix);
+
 module.exports = router;

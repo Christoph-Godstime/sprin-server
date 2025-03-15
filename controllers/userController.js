@@ -7,6 +7,8 @@ const CryptoJS = require("crypto-js");
 const ContactUs = require("../models/ContactUs");
 const sendPushNotification = require("../utils/sendPushNotification");
 const { getAdminPushTokens } = require("../utils/adminPushTokens");
+const axios = require("axios");
+require("dotenv").config();
 
 const twilio = require("twilio");
 const client = twilio(
@@ -438,6 +440,44 @@ module.exports = {
         status: false,
         message: error.message,
       });
+    }
+  },
+
+  googleMapDistanceMatrix: async (req, res) => {
+    try {
+      const { startLat, startLng, destinationLat, destinationLng, mode } =
+        req.query;
+
+      if (!startLat || !startLng || !destinationLat || !destinationLng) {
+        return res.status(400).json({ error: "Missing required parameters." });
+      }
+
+      const googleApiKey = process.env.GOOGLE_MAPS_API_KEY; // Store your key in `.env`
+      const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${startLat},${startLng}&destinations=${destinationLat},${destinationLng}&mode=${
+        mode || "DRIVING"
+      }&key=${googleApiKey}`;
+
+      const response = await axios.get(url);
+
+      if (
+        response.data.status !== "OK" ||
+        response.data.rows[0].elements[0].status !== "OK"
+      ) {
+        return res
+          .status(400)
+          .json({
+            error: "Invalid response from Google API",
+            details: response.data,
+          });
+      }
+
+      const distance = response.data.rows[0].elements[0].distance.text;
+      const duration = response.data.rows[0].elements[0].duration.text;
+
+      res.json({ distance, duration });
+    } catch (error) {
+      console.error("Error fetching distance data:", error);
+      res.status(500).json({ error: "Failed to fetch distance data" });
     }
   },
 };
