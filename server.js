@@ -4,6 +4,11 @@ const cors = require("cors");
 const app = express();
 const dotenv = require("dotenv");
 
+dotenv.config();
+
+// Ensure raw body parsing for Paystack webhook
+app.use("/api/v1/paystack-webhook", express.raw({ type: "application/json" }));
+
 const allowedOrigins = [
   "http://localhost:3000", // Development
   "https://www.sprinapp.com", // Production
@@ -16,6 +21,12 @@ app.use((req, res, next) => {
   if (allowedOrigins.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
   }
+
+  // Bypass CORS for Paystack Webhooks
+  if (req.path === "/api/v1/paystack-webhook") {
+    res.setHeader("Access-Control-Allow-Origin", "*"); // Allow all origins for webhooks
+  }
+
   res.setHeader(
     "Access-Control-Allow-Methods",
     "GET,POST,PUT,DELETE,PATCH,OPTIONS"
@@ -46,6 +57,7 @@ const rider = require("./routes/rider");
 const grocery = require("./routes/grocery");
 const groceryCategory = require("./routes/groceryCategory");
 const groceryStore = require("./routes/groceryStore");
+const paystackRoute = require("./routes/paystackRoutes");
 const { fireBaseConnection } = require("./utils/fbConnect");
 const dataBaseConnection = require("./utils/mongoConn");
 
@@ -141,8 +153,6 @@ io.on("connection", (socket) => {
   );
 });
 
-dotenv.config();
-
 fireBaseConnection();
 
 dataBaseConnection();
@@ -175,6 +185,7 @@ app.use("/api/bank-details", bankDetails);
 app.use("/api/rider-payment", riderPaymentRoute);
 app.use("/api/rider-bank-details", riderBankDetails);
 app.use("/api/rider", rider);
+app.use("/api/v1", paystackRoute);
 
 http.listen(process.env.PORT || 6000, () =>
   console.log(`Sprin backend app listening on port ${process.env.PORT}!`)
