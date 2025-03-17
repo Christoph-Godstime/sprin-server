@@ -6,8 +6,6 @@ const CompanyRevenue = require("../models/CompanyRevenue");
 const sendPushNotification = require("../utils/sendPushNotification");
 const { getAdminPushTokens } = require("../utils/adminPushTokens");
 const { convertToNigerianTime } = require("../utils/helper");
-const sendPaymentIssueEmail = require("../utils/sendPaymentIssueEmail");
-const { createPaymentLink } = require("../utils/createPaymantLink");
 
 exports.paystackWebhook = async (req, res) => {
   try {
@@ -57,46 +55,8 @@ exports.paystackWebhook = async (req, res) => {
     );
 
     const { status, data } = response.data;
-    const transactionAmount = data.amount / 100; // Convert from kobo to Naira
-    const grandTotal = existingOrder.grandTotal;
-    const user = await User.findById(existingOrder.userId);
 
     if (status === true) {
-      let newPaidAmount = (existingOrder.paidAmount || 0) + transactionAmount;
-      let remainingBalance = grandTotal - newPaidAmount;
-
-      if (newPaidAmount < grandTotal) {
-        await Order.findByIdAndUpdate(orderId, {
-          paymentStatus: "Partially Paid",
-          paidAmount: newPaidAmount,
-          remainingBalance: remainingBalance,
-        });
-
-        if (user) {
-          const paymentLink = await createPaymentLink(
-            orderId,
-            user._id,
-            remainingBalance,
-            referredBy
-          );
-
-          await sendPaymentIssueEmail(
-            user.email,
-            user.firstName,
-            orderId,
-            "underpay",
-            grandTotal,
-            newPaidAmount,
-            paymentLink
-          );
-        }
-
-        return res.status(200).json({
-          status: true,
-          message: `Payment of ₦${transactionAmount} received. ₦${remainingBalance} remaining.`,
-        });
-      }
-
       await Order.findByIdAndUpdate(orderId, { paymentStatus: "Completed" });
 
       res.status(200).send();
@@ -135,30 +95,6 @@ exports.paystackWebhook = async (req, res) => {
         );
       } else {
         console.error("Store owner's expoPushToken not found.");
-      }
-
-      if (newPaidAmount > grandTotal) {
-        const excessAmount = newPaidAmount - grandTotal;
-        await Order.findByIdAndUpdate(orderId, {
-          overPaidAmount: excessAmount,
-          paymentStatus: "Completed",
-          paidAmount: grandTotal,
-          remainingBalance: 0,
-        });
-
-        if (user) {
-          user.walletBalance += excessAmount;
-          await user.save();
-
-          await sendPaymentIssueEmail(
-            user.email,
-            user.firstName,
-            orderId,
-            "overpay",
-            grandTotal,
-            newPaidAmount
-          );
-        }
       }
 
       if (referredBy) {
