@@ -47,6 +47,9 @@ const orderSchema = new mongoose.Schema(
     orderTotal: { type: Number, required: true },
     deliveryFee: { type: Number, required: true },
     grandTotal: { type: Number, required: true },
+    paidAmount: { type: Number, default: 0 },
+    remainingBalance: { type: Number, default: 0 },
+    overPaidAmount: { type: Number, default: 0 },
     deliveryAddress: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Address",
@@ -56,7 +59,7 @@ const orderSchema = new mongoose.Schema(
     paymentStatus: {
       type: String,
       default: "Pending",
-      enum: ["Pending", "Completed", "Failed"],
+      enum: ["Pending", "Completed", "Partially Paid", "Failed"],
     },
     orderStatus: {
       type: String,
