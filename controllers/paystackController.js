@@ -11,14 +11,16 @@ exports.paystackWebhook = async (req, res) => {
   try {
     // **1. Verify Paystack Webhook Signature**
     const secret = process.env.PAYSTACK_SECRET_KEY;
+    const payload = req.body.toString("utf8"); // Convert Buffer to String
     const hash = crypto
       .createHmac("sha512", secret)
-      .update(JSON.stringify(req.body))
+      .update(payload)
       .digest("hex");
     console.log("secret: ", secret);
     console.log("hash: ", hash);
     console.log("Received Signature:", req.headers["x-paystack-signature"]);
     console.log("req.body: ", req.body);
+
     if (hash !== req.headers["x-paystack-signature"]) {
       console.log("Unauthorized webhook");
       return res
