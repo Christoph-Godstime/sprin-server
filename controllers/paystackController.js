@@ -30,6 +30,9 @@ exports.paystackWebhook = async (req, res) => {
 
     // **2. Extract Payment Data**
     const event = req.body;
+
+    console.log("event: ", event);
+
     if (event.event !== "charge.success") {
       console.log("Invalid event type");
       return res
