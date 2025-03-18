@@ -13,17 +13,12 @@ exports.paystackWebhook = async (req, res) => {
     const secret = process.env.PAYSTACK_SECRET_KEY;
     const payload = req.body.toString(); // Convert Buffer to String
 
-    console.log("payload: ", payload);
     const hash = crypto
       .createHmac("sha512", secret)
       .update(payload)
       .digest("hex");
 
-    console.log("hash: ", hash);
-    console.log("Received Signature:", req.headers["x-paystack-signature"]);
-
     if (hash !== req.headers["x-paystack-signature"]) {
-      console.log("Unauthorized webhook");
       return res
         .status(401)
         .json({ status: false, message: "Unauthorized webhook" });
@@ -32,17 +27,14 @@ exports.paystackWebhook = async (req, res) => {
     // **2. Extract Payment Data**
     const event = JSON.parse(payload);
 
-    console.log("event: ", event);
-
     if (event.event !== "charge.success") {
-      console.log("Invalid event type");
       return res
         .status(400)
         .json({ status: false, message: "Invalid event type" });
     }
 
     const { reference, metadata } = event.data;
-    console.log("data: ", event.data);
+
     const { orderId, storeId, referredBy } = metadata;
 
     // Check if paymentStatus is already "Completed"
@@ -65,8 +57,6 @@ exports.paystackWebhook = async (req, res) => {
         },
       }
     );
-
-    console.log("response: ", response);
 
     const { status, data } = response.data;
 
@@ -186,11 +176,11 @@ exports.paystackWebhook = async (req, res) => {
         }
       }
 
-      const { userSocketMap, io } = req;
+      const { io, userSocketMap } = req;
       const storeSocketId = userSocketMap[storeId];
 
       if (storeSocketId) {
-        io.to(storeSocketId).emit("newOrder", updatedOrder);
+        io.to(storeSocketId).emit("paymentSuccess", updatedOrder);
       }
 
       return res.status(200).send();
