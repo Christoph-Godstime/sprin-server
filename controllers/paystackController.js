@@ -17,20 +17,25 @@ exports.paystackWebhook = async (req, res) => {
       .digest("hex");
 
     if (hash !== req.headers["x-paystack-signature"]) {
+      console.log("Unauthorized webhook");
       return res
         .status(401)
         .json({ status: false, message: "Unauthorized webhook" });
     }
 
+    console.log("hash: ", hash);
+
     // **2. Extract Payment Data**
     const event = req.body;
     if (event.event !== "charge.success") {
+      console.log("Invalid event type");
       return res
         .status(400)
         .json({ status: false, message: "Invalid event type" });
     }
 
     const { reference, metadata } = event.data;
+    console.log("data: ", event.data);
     const { orderId, storeId, referredBy } = metadata;
 
     // Check if paymentStatus is already "Completed"
@@ -53,6 +58,8 @@ exports.paystackWebhook = async (req, res) => {
         },
       }
     );
+
+    console.log("response: ", response);
 
     const { status, data } = response.data;
 
