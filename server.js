@@ -189,6 +189,7 @@ app.use("/api/bank-details", bankDetails);
 app.use("/api/rider-payment", riderPaymentRoute);
 app.use("/api/rider-bank-details", riderBankDetails);
 app.use("/api/rider", rider);
+app.use("/api/v1", paystackRoute);
 app.use(
   "/api/v1/paystack-webhook",
   (req, res, next) => {
