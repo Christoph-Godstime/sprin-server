@@ -12,11 +12,17 @@ exports.paystackWebhook = async (req, res) => {
     // **1. Verify Paystack Webhook Signature**
     const secret = process.env.PAYSTACK_SECRET_KEY;
     const payload = req.body.toString("utf8"); // Convert Buffer to String
+    const payload2 = req.body.toString();
+    const event2 = JSON.parse(payload2);
+
+    console.log("payload2 event2: ", payload2, event2);
+
+    console.log("payload: ", payload);
     const hash = crypto
       .createHmac("sha512", secret)
       .update(payload)
       .digest("hex");
-    console.log("secret: ", secret);
+
     console.log("hash: ", hash);
     console.log("Received Signature:", req.headers["x-paystack-signature"]);
     console.log("req.body: ", req.body);
