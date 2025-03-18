@@ -4,8 +4,8 @@ const getAdminPushTokens = async () => {
   try {
     const emails = [
       "christophergodstime45@gmail.com",
-      "christopherprosper15@gmail.com",
-      "simeonalex29@gmail.com",
+      // "christopherprosper15@gmail.com",
+      // "simeonalex29@gmail.com",
     ];
 
     // Query users with the specified emails and retrieve their Expo push tokens
