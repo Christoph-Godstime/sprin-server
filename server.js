@@ -153,6 +153,10 @@ io.on("connection", (socket) => {
   );
 });
 
+// Store io and userSocketMap in the app instance
+app.set("io", io);
+app.set("userSocketMap", userSocketMap);
+
 fireBaseConnection();
 
 dataBaseConnection();
@@ -185,7 +189,15 @@ app.use("/api/bank-details", bankDetails);
 app.use("/api/rider-payment", riderPaymentRoute);
 app.use("/api/rider-bank-details", riderBankDetails);
 app.use("/api/rider", rider);
-app.use("/api/v1", paystackRoute);
+app.use(
+  "/api/v1/paystack-webhook",
+  (req, res, next) => {
+    req.io = io;
+    req.userSocketMap = userSocketMap;
+    next();
+  },
+  paystackRoute
+);
 
 http.listen(process.env.PORT || 6000, () =>
   console.log(`Sprin backend app listening on port ${process.env.PORT}!`)

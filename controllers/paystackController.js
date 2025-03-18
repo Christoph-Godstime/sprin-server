@@ -176,11 +176,11 @@ exports.paystackWebhook = async (req, res) => {
         }
       }
 
-      const { io, userSocketMap } = req;
+      const { userSocketMap, io } = req;
       const storeSocketId = userSocketMap[storeId];
 
       if (storeSocketId) {
-        io.to(storeSocketId).emit("paymentSuccess", updatedOrder);
+        io.to(storeSocketId).emit("newOrder", updatedOrder);
       }
 
       return res.status(200).send();
