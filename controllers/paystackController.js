@@ -16,14 +16,14 @@ exports.paystackWebhook = async (req, res) => {
       .update(JSON.stringify(req.body))
       .digest("hex");
 
+    console.log("hash: ", hash);
+
     if (hash !== req.headers["x-paystack-signature"]) {
       console.log("Unauthorized webhook");
       return res
         .status(401)
         .json({ status: false, message: "Unauthorized webhook" });
     }
-
-    console.log("hash: ", hash);
 
     // **2. Extract Payment Data**
     const event = req.body;
