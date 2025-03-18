@@ -12,7 +12,7 @@ exports.paystackWebhook = async (req, res) => {
     // **1. Verify Paystack Webhook Signature**
     const secret = process.env.PAYSTACK_SECRET_KEY;
     const payload = req.body.toString(); // Convert Buffer to String
-
+    console.log("payload: ", payload);
     const hash = crypto
       .createHmac("sha512", secret)
       .update(payload)
@@ -26,6 +26,8 @@ exports.paystackWebhook = async (req, res) => {
 
     // **2. Extract Payment Data**
     const event = JSON.parse(payload);
+
+    console.log("event: ", event);
 
     if (event.event !== "charge.success") {
       return res
