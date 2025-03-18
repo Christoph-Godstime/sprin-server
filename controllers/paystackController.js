@@ -18,6 +18,7 @@ exports.paystackWebhook = async (req, res) => {
     console.log("secret: ", secret);
     console.log("hash: ", hash);
     console.log("Received Signature:", req.headers["x-paystack-signature"]);
+    console.log("req: ", req);
     if (hash !== req.headers["x-paystack-signature"]) {
       console.log("Unauthorized webhook");
       return res
