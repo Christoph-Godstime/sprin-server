@@ -15,9 +15,9 @@ exports.paystackWebhook = async (req, res) => {
       .createHmac("sha512", secret)
       .update(JSON.stringify(req.body))
       .digest("hex");
-
+    console.log("secret: ", secret);
     console.log("hash: ", hash);
-
+    console.log("Received Signature:", req.headers["x-paystack-signature"]);
     if (hash !== req.headers["x-paystack-signature"]) {
       console.log("Unauthorized webhook");
       return res
