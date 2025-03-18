@@ -11,11 +11,7 @@ exports.paystackWebhook = async (req, res) => {
   try {
     // **1. Verify Paystack Webhook Signature**
     const secret = process.env.PAYSTACK_SECRET_KEY;
-    const payload = req.body.toString("utf8"); // Convert Buffer to String
-    const payload2 = req.body.toString();
-    const event2 = JSON.parse(payload2);
-
-    console.log("payload2 event2: ", payload2, event2);
+    const payload = req.body.toString(); // Convert Buffer to String
 
     console.log("payload: ", payload);
     const hash = crypto
@@ -25,7 +21,6 @@ exports.paystackWebhook = async (req, res) => {
 
     console.log("hash: ", hash);
     console.log("Received Signature:", req.headers["x-paystack-signature"]);
-    console.log("req.body: ", req.body);
 
     if (hash !== req.headers["x-paystack-signature"]) {
       console.log("Unauthorized webhook");
@@ -35,7 +30,7 @@ exports.paystackWebhook = async (req, res) => {
     }
 
     // **2. Extract Payment Data**
-    const event = req.body;
+    const event = JSON.parse(payload);
 
     console.log("event: ", event);
 
