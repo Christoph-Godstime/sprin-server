@@ -73,8 +73,6 @@ exports.paystackWebhook = async (req, res) => {
     if (status === true) {
       await Order.findByIdAndUpdate(orderId, { paymentStatus: "Completed" });
 
-      res.status(200).send();
-
       const updatedOrder = await Order.findById(orderId)
         .select(
           "userId deliveryAddress orderItems deliveryFee storeId storeType orderStatus storeCoords recipientCoords paymentStatus orderDate storeSecretCode riderSecretCode updatedAt freeDelivery serviceFee"
@@ -194,6 +192,8 @@ exports.paystackWebhook = async (req, res) => {
       if (storeSocketId) {
         io.to(storeSocketId).emit("newOrder", updatedOrder);
       }
+
+      return res.status(200).send();
     }
   } catch (error) {
     console.error("Webhook Error:", error.message);
