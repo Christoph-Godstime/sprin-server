@@ -16,8 +16,6 @@ const sendPushNotification = require("../utils/sendPushNotification");
 const { getAdminPushTokens } = require("../utils/adminPushTokens");
 const { convertToNigerianTime } = require("../utils/helper");
 const sendFirstOrderThankYouEmail = require("../utils/email_firstOrderMessage");
-const sendPaymentIssueEmail = require("../utils/sendPaymentIssueEmail");
-const { createPaymentLink } = require("../utils/createPaymantLink");
 
 const generateSecretCode = () => {
   return Math.floor(1000 + Math.random() * 9000).toString();
@@ -255,8 +253,15 @@ module.exports = {
   },
 
   verifyPayment: async (req, res) => {
-    const { reference, orderId, storeId, senderId, referredBy, storeType } =
-      req.body;
+    const {
+      reference,
+      orderId,
+      storeId,
+      senderId,
+      referredBy,
+      storeType,
+      walletAmountUsed,
+    } = req.body;
 
     try {
       const existingOrder = await Order.findById(orderId);
@@ -284,6 +289,14 @@ module.exports = {
 
       if (status === true) {
         await Order.findByIdAndUpdate(orderId, { paymentStatus: "Completed" });
+
+        if (walletAmountUsed > 0) {
+          const user = await User.findById(existingOrder.userId);
+          if (user) {
+            user.walletBalance -= walletAmountUsed;
+            await user.save();
+          }
+        }
 
         const updatedOrder = await Order.findById(orderId)
           .select(
@@ -419,13 +432,28 @@ module.exports = {
   },
 
   verifyWalletPayment: async (req, res) => {
-    const { orderId, storeId, senderId, referredBy, storeType } = req.body;
+    const {
+      orderId,
+      storeId,
+      senderId,
+      referredBy,
+      storeType,
+      walletAmountUsed,
+    } = req.body;
 
     try {
       await Order.findByIdAndUpdate(orderId, {
         paymentStatus: "Completed",
         paymentMethod: "wallet",
       });
+
+      if (walletAmountUsed > 0) {
+        const user = await User.findById(senderId);
+        if (user) {
+          user.walletBalance -= walletAmountUsed;
+          await user.save();
+        }
+      }
 
       const updatedOrder = await Order.findById(orderId)
         .select(
