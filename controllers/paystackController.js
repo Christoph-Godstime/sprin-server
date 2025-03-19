@@ -35,7 +35,7 @@ exports.paystackWebhook = async (req, res) => {
 
     const { reference, metadata } = event.data;
 
-    const { orderId, storeId, referredBy } = metadata;
+    const { orderId, storeId, referredBy, walletAmountUsed } = metadata;
 
     // Check if paymentStatus is already "Completed"
     const existingOrder = await Order.findById(orderId);
@@ -62,6 +62,15 @@ exports.paystackWebhook = async (req, res) => {
 
     if (status === true) {
       await Order.findByIdAndUpdate(orderId, { paymentStatus: "Completed" });
+
+      // Deduct wallet amount used
+      if (walletAmountUsed > 0) {
+        const user = await User.findById(existingOrder.userId);
+        if (user) {
+          user.walletBalance -= amountUsed;
+          await user.save();
+        }
+      }
 
       const updatedOrder = await Order.findById(orderId)
         .select(
