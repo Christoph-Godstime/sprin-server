@@ -13,7 +13,7 @@ module.exports = {
       // Check if user has ordered from the restaurant
       const orderExists = await Order.findOne({
         userId: userId,
-        restaurantId: restaurantId,
+        storeId: restaurantId,
       });
       if (!orderExists) {
         return res.status(400).json({
