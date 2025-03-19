@@ -67,7 +67,7 @@ exports.paystackWebhook = async (req, res) => {
       if (walletAmountUsed > 0) {
         const user = await User.findById(existingOrder.userId);
         if (user) {
-          user.walletBalance -= amountUsed;
+          user.walletBalance -= walletAmountUsed;
           await user.save();
         }
       }
