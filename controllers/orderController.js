@@ -7,6 +7,7 @@ const User = require("../models/User");
 const Restaurant = require("../models/Restaurant");
 const Rider = require("../models/Rider");
 const Payment = require("../models/Payment");
+const StorePayment = require("../models/StorePayment");
 const RiderPayment = require("../models/RiderPayment");
 const CompanyRevenue = require("../models/CompanyRevenue");
 const Address = require("../models/Address");
@@ -21,26 +22,38 @@ const generateSecretCode = () => {
   return Math.floor(1000 + Math.random() * 9000).toString();
 };
 
-const processRestaurantPayment = async (order) => {
-  const restaurantId = order.restaurantId;
-  const orderTotal = order.orderTotal;
+const processStorePayment = async (order) => {
+  const { storeId, orderTotal, storeType } = order;
+  let store, commissionRate, paymentModel, paymentQuery;
 
-  // Fetch the restaurant to get its commission rate
-  const restaurant = await Restaurant.findById(restaurantId);
-
-  if (!restaurant) {
-    throw new Error("Restaurant not found");
+  if (storeType === "Restaurant") {
+    store = await Restaurant.findById(storeId);
+    if (!store) {
+      throw new Error("Restaurant not found");
+    }
+    commissionRate = store.restaurantCommission || 0.15; // Default 15%
+    paymentModel = Payment;
+    paymentQuery = { restaurantId: storeId };
+  } else if (storeType === "GroceryStore") {
+    store = await GroceryStore.findById(storeId);
+    if (!store) {
+      throw new Error("Grocery Store not found");
+    }
+    commissionRate = store.storeCommission || 0.0; // Default 0%
+    paymentModel = StorePayment;
+    paymentQuery = { storeId };
+  } else {
+    throw new Error("Invalid store type");
   }
 
-  const commissionRate = restaurant.restaurantCommission || 0.15; // Default to 15% if not set
   const commission = orderTotal * commissionRate;
   const withdrawable = orderTotal - commission;
 
-  // Find the restaurant's payment record and update unpaid fields
-  let payment = await Payment.findOne({ restaurantId });
+  // Find the store's payment record and update unpaid fields
+  let payment = await paymentModel.findOne(paymentQuery);
 
   if (!payment) {
-    payment = new Payment({ restaurantId });
+    payment = new paymentModel(paymentQuery);
   }
 
   payment.unpaid.totalOrders += 1;
@@ -54,7 +67,7 @@ const processRestaurantPayment = async (order) => {
 
   await payment.save();
 
-  // Add commission to CompanyRevenue using atomic update
+  // Add commission to CompanyRevenue
   try {
     const result = await CompanyRevenue.findOneAndUpdate(
       {},
@@ -64,7 +77,7 @@ const processRestaurantPayment = async (order) => {
           commissions: commission,
         },
       },
-      { new: true, upsert: true } // Ensure document is created if it doesn't exist
+      { new: true, upsert: true }
     );
 
     if (!result) {
@@ -504,8 +517,8 @@ module.exports = {
           );
 
           if (referrer.expoPushToken) {
-            const fullName = `${referrer.firstName} ${referrer.lastName}`;
-            const message = `${fullName}, your Sprin app referral code has been used by someone! ₦500 has been added to your wallet, bringing your total wallet balance to ₦${referrer.walletBalance}. You can use it to pay for an order at any time.`;
+            const fullName = `${referrer.firstName}`;
+            const message = `${fullName}, your Sprin app referral code was used by someone! ₦500 has been added to your wallet, bringing your total wallet balance to ₦${referrer.walletBalance}. You can use it to pay for an order at any time.`;
 
             await sendPushNotification(
               [referrer.expoPushToken],
@@ -1025,7 +1038,7 @@ module.exports = {
         case "Out for Delivery":
           updateFields.inTransitTime = currentTime;
           updateFields.progressSteps = 4;
-          await processRestaurantPayment(order);
+          await processStorePayment(order);
           await sendPushNotification(
             [user.expoPushToken],
             "Order Update",

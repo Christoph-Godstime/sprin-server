@@ -14,11 +14,14 @@ module.exports = {
       const orderExists = await Order.findOne({
         userId: userId,
         storeId: restaurantId,
+        orderStatus: "Delivered",
+        paymentStatus: "Completed",
       });
       if (!orderExists) {
         return res.status(400).json({
           status: false,
-          message: "You must have ordered from this restaurant to rate it.",
+          message:
+            "You can only rate a restaurant after a completed and delivered order.",
         });
       }
 

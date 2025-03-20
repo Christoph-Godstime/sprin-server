@@ -11,6 +11,7 @@ const groceryStoreSchema = new mongoose.Schema(
       ref: "User",
       required: true, // Store owner's user reference
     },
+    storeCommission: { type: Number, default: 0.0 },
     isAvailable: { type: Boolean, default: true }, // Store availability status
     isActive: { type: Boolean, default: true }, // If the store is active
     verification: {

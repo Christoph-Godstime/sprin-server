@@ -1,4 +1,5 @@
 const Payment = require("../models/Payment");
+const StorePayment = require("../models/StorePayment");
 const PayoutRequest = require("../models/payoutRequest");
 const PaymentHistory = require("../models/PaymentHistory");
 const BankDetails = require("../models/BankDetails");
@@ -176,6 +177,34 @@ module.exports = {
         return res.status(404).json({
           status: false,
           message: "No earnings found for this restaurant.",
+        });
+      }
+
+      res.status(200).json({
+        status: true,
+        message: "Payment details retrieved successfully",
+        data: paymentDetails,
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while retrieving payment details.",
+        error: error.message,
+      });
+    }
+  },
+
+  getStorePaymentDetails: async (req, res) => {
+    const { storeId } = req.params; // Assuming req.user contains the restaurant's details
+
+    try {
+      // Find the payment details for the restaurant
+      const paymentDetails = await StorePayment.findOne({ storeId });
+
+      if (!paymentDetails) {
+        return res.status(404).json({
+          status: false,
+          message: "No earnings found for this store.",
         });
       }
 

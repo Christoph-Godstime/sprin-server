@@ -23,4 +23,10 @@ router.get(
   paymentController.getPaymentDetails
 );
 
+router.get(
+  "/store-details/:storeId",
+  verifyTokenAndAuthorization,
+  paymentController.getStorePaymentDetails
+);
+
 module.exports = router;
