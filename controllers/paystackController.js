@@ -33,18 +33,14 @@ exports.paystackWebhook = async (req, res) => {
         .json({ status: false, message: "Invalid event type" });
     }
 
-    const { reference, metadata } = event.data;
+    const { reference } = event.data;
 
     console.log("event.data: ", event.data);
 
     console.log("reference: ", reference);
 
-    console.log("metadata: ", metadata);
-
-    const { orderId, storeId, referredBy, walletAmountUsed } = metadata;
-
     // Check if paymentStatus is already "Completed"
-    const existingOrder = await Order.findById(orderId);
+    const existingOrder = await Order.findById(reference);
     if (!existingOrder) {
       return res
         .status(404)
@@ -63,6 +59,14 @@ exports.paystackWebhook = async (req, res) => {
         },
       }
     );
+
+    const {
+      _id: orderId,
+      storeId,
+      referredBy,
+      storeType,
+      walletAmountUsed,
+    } = existingOrder;
 
     const { status, data } = response.data;
 
