@@ -35,6 +35,12 @@ exports.paystackWebhook = async (req, res) => {
 
     const { reference, metadata } = event.data;
 
+    console.log("event.data: ", event.data);
+
+    console.log("reference: ", reference);
+
+    console.log("metadata: ", metadata);
+
     const { orderId, storeId, referredBy, walletAmountUsed } = metadata;
 
     // Check if paymentStatus is already "Completed"
