@@ -178,7 +178,7 @@ module.exports = {
         paymentStatus: "Completed",
       })
         .populate({
-          path: "restaurantId",
+          path: "storeId",
           select: "title coords", // Only populate title and coords of restaurant
         })
         .populate({
