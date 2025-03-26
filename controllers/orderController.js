@@ -1462,12 +1462,6 @@ module.exports = {
         .populate({
           path: "storeId",
           select: "title imageUrl logoUrl location coords",
-          model: "Restaurant",
-        })
-        .populate({
-          path: "storeId",
-          select: "title imageUrl logoUrl location coords",
-          model: "GroceryStore",
         })
         .populate({
           path: "orderItems.productId",
