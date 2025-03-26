@@ -1461,7 +1461,11 @@ module.exports = {
         })
         .populate({
           path: "storeId",
-          select: "title imageUrl logoUrl location coords",
+          select: "title imageUrl logoUrl location coords owner",
+          populate: {
+            path: "owner",
+            select: "firstName lastName email phone profile",
+          },
         })
         .populate({
           path: "orderItems.productId",
