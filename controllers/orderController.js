@@ -1198,10 +1198,15 @@ module.exports = {
       console.log("Assigned Rider: ", assignedRider);
 
       // Assign rider to order and update status
-      order.assignedRider = assignedRider._id;
-      order.orderStatus = "Rider Assigned";
-      order.riderAssignedTime = new Date();
-      await order.save();
+      await Order.findByIdAndUpdate(
+        order._id,
+        {
+          assignedRider: assignedRider._id,
+          orderStatus: "Rider Assigned",
+          riderAssignedTime: new Date(),
+        },
+        { new: true }
+      );
 
       // Update rider's status and save
       assignedRider.isAvailable = false;
