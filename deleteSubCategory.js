@@ -27,5 +27,5 @@ const deleteGroceriesInSubCategory = async (subCategoryId) => {
   }
 };
 
-const subCategoryId = "67dfaeb1568092ac4c15fbd8"; // Replace with actual subcategory ID
+const subCategoryId = "67e1536293f90b4a93eab9b6"; // Replace with actual subcategory ID
 deleteGroceriesInSubCategory(subCategoryId);

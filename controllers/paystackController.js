@@ -6,6 +6,8 @@ const CompanyRevenue = require("../models/CompanyRevenue");
 const sendPushNotification = require("../utils/sendPushNotification");
 const { getAdminPushTokens } = require("../utils/adminPushTokens");
 const { convertToNigerianTime } = require("../utils/helper");
+const sendReferralRewardEmail = require("../utils/sendReferralRewardEmail");
+const sendNewOrderNotificationEmail = require("../utils/sendNewOrderNotificationEmail");
 
 exports.paystackWebhook = async (req, res) => {
   try {
@@ -94,7 +96,7 @@ exports.paystackWebhook = async (req, res) => {
           populate: {
             path: "owner",
 
-            select: "expoPushToken firstName lastName phone",
+            select: "expoPushToken firstName lastName phone email",
           },
         })
         .populate({
@@ -108,6 +110,8 @@ exports.paystackWebhook = async (req, res) => {
 
       const storeOwnerPushToken = updatedOrder.storeId.owner?.expoPushToken;
 
+      const storeOwnerEmail = updatedOrder.storeId.owner?.email;
+
       if (storeOwnerPushToken) {
         await sendPushNotification(
           [storeOwnerPushToken],
@@ -115,7 +119,10 @@ exports.paystackWebhook = async (req, res) => {
           "You have received a new order! Open the app to view the details and start preparing."
         );
       } else {
-        console.error("Store owner's expoPushToken not found.");
+        await sendNewOrderNotificationEmail(
+          storeOwnerEmail,
+          updatedOrder.storeId.title
+        );
       }
 
       if (referredBy) {
@@ -130,8 +137,9 @@ exports.paystackWebhook = async (req, res) => {
             { new: true, upsert: true }
           );
 
+          const fullName = `${referrer.firstName}`;
+
           if (referrer.expoPushToken) {
-            const fullName = `${referrer.firstName} ${referrer.lastName}`;
             const message = `${fullName}, your Sprin app referral code has been used by someone! ₦500 has been added to your wallet, bringing your total wallet balance to ₦${referrer.walletBalance}. You can use it to pay for an order at any time.`;
 
             await sendPushNotification(
@@ -140,7 +148,11 @@ exports.paystackWebhook = async (req, res) => {
               message
             );
           } else {
-            console.error("Referrer's expoPushToken not found.");
+            await sendReferralRewardEmail(
+              referrer.email,
+              fullName,
+              referrer.walletBalance
+            );
           }
         } else {
           console.error("Referrer not found");

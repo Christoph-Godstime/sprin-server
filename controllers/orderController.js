@@ -17,6 +17,9 @@ const sendPushNotification = require("../utils/sendPushNotification");
 const { getAdminPushTokens } = require("../utils/adminPushTokens");
 const { convertToNigerianTime } = require("../utils/helper");
 const sendFirstOrderThankYouEmail = require("../utils/email_firstOrderMessage");
+const sendReferralRewardEmail = require("../utils/sendReferralRewardEmail");
+const sendNewOrderNotificationEmail = require("../utils/sendNewOrderNotificationEmail");
+const sendOrderUpdateEmail = require("../utils/sendOrderUpdateEmail");
 
 const generateSecretCode = () => {
   return Math.floor(1000 + Math.random() * 9000).toString();
@@ -318,12 +321,10 @@ module.exports = {
           .populate({ path: "userId", select: "phone profile" })
           .populate({
             path: "storeId",
-
             select: "title imageUrl logoUrl time",
             populate: {
               path: "owner",
-
-              select: "expoPushToken firstName lastName phone",
+              select: "expoPushToken firstName lastName phone email",
             },
           })
           .populate({
@@ -337,6 +338,8 @@ module.exports = {
 
         const storeOwnerPushToken = updatedOrder.storeId.owner?.expoPushToken;
 
+        const storeOwnerEmail = updatedOrder.storeId.owner?.email;
+
         if (storeOwnerPushToken) {
           await sendPushNotification(
             [storeOwnerPushToken],
@@ -344,7 +347,10 @@ module.exports = {
             "You have received a new order! Open the app to view the details and start preparing."
           );
         } else {
-          console.error("Store owner's expoPushToken not found.");
+          await sendNewOrderNotificationEmail(
+            storeOwnerEmail,
+            updatedOrder.storeId.title
+          );
         }
 
         if (referredBy) {
@@ -359,8 +365,9 @@ module.exports = {
               { new: true, upsert: true }
             );
 
+            const fullName = `${referrer.firstName}`;
+
             if (referrer.expoPushToken) {
-              const fullName = `${referrer.firstName} ${referrer.lastName}`;
               const message = `${fullName}, your Sprin app referral code has been used by someone! ₦500 has been added to your wallet, bringing your total wallet balance to ₦${referrer.walletBalance}. You can use it to pay for an order at any time.`;
 
               await sendPushNotification(
@@ -369,7 +376,11 @@ module.exports = {
                 message
               );
             } else {
-              console.error("Referrer's expoPushToken not found.");
+              await sendReferralRewardEmail(
+                referrer.email,
+                fullName,
+                referrer.walletBalance
+              );
             }
           } else {
             console.error("Referrer not found");
@@ -480,7 +491,7 @@ module.exports = {
           populate: {
             path: "owner",
 
-            select: "expoPushToken firstName lastName phone",
+            select: "expoPushToken firstName lastName phone email",
           },
         })
         .populate({
@@ -494,6 +505,8 @@ module.exports = {
 
       const storeOwnerPushToken = updatedOrder.storeId.owner?.expoPushToken;
 
+      const storeOwnerEmail = updatedOrder.storeId.owner?.email;
+
       if (storeOwnerPushToken) {
         await sendPushNotification(
           [storeOwnerPushToken],
@@ -501,7 +514,10 @@ module.exports = {
           "You have received a new order! Open the app to view the details and start preparing."
         );
       } else {
-        console.error("Store owner's expoPushToken not found.");
+        await sendNewOrderNotificationEmail(
+          storeOwnerEmail,
+          updatedOrder.storeId.title
+        );
       }
 
       if (referredBy) {
@@ -516,8 +532,9 @@ module.exports = {
             { new: true, upsert: true }
           );
 
+          const fullName = `${referrer.firstName}`;
+
           if (referrer.expoPushToken) {
-            const fullName = `${referrer.firstName}`;
             const message = `${fullName}, your Sprin app referral code was used by someone! ₦500 has been added to your wallet, bringing your total wallet balance to ₦${referrer.walletBalance}. You can use it to pay for an order at any time.`;
 
             await sendPushNotification(
@@ -526,7 +543,11 @@ module.exports = {
               message
             );
           } else {
-            console.error("Referrer's expoPushToken not found.");
+            await sendReferralRewardEmail(
+              referrer.email,
+              fullName,
+              referrer.walletBalance
+            );
           }
         } else {
           console.error("Referrer not found");
@@ -979,20 +1000,20 @@ module.exports = {
         });
       }
 
+      let statusMessages = "";
+
       switch (orderStatus) {
         case "Preparing":
           updateFields.preparingTime = currentTime;
           updateFields.progressSteps = 1;
-          await sendPushNotification(
-            [user.expoPushToken],
-            "Order Update",
-            "Your order is now being prepared."
-          );
+          statusMessages = "Your order is now being prepared.";
           break;
 
         case "Ready":
           updateFields.readyTime = currentTime;
           updateFields.progressSteps = 2;
+          statusMessages =
+            "Your order is ready and has been assigned to a rider.";
           const assignResult = await module.exports.assignOrderToRider(
             orderId,
             req
@@ -1005,11 +1026,7 @@ module.exports = {
           } else if (!assignResult.status) {
             return res.status(500).json(assignResult);
           }
-          await sendPushNotification(
-            [user.expoPushToken],
-            "Order Update",
-            "Your order is ready and has been assigned to a rider."
-          );
+
           break;
 
         case "Rider Assigned":
@@ -1017,11 +1034,7 @@ module.exports = {
             updateFields.orderStatus = "Rider Accepted Order";
             updateFields.riderAcceptedTime = currentTime;
             updateFields.progressSteps = 3;
-            await sendPushNotification(
-              [user.expoPushToken],
-              "Order Update",
-              "A rider has accepted your order."
-            );
+            statusMessages = "A rider has accepted your order.";
           } else if (riderResponse === "decline") {
             await module.exports.reassignOrder(
               order._id,
@@ -1039,21 +1052,13 @@ module.exports = {
           updateFields.inTransitTime = currentTime;
           updateFields.progressSteps = 4;
           await processStorePayment(order);
-          await sendPushNotification(
-            [user.expoPushToken],
-            "Order Update",
-            "Your order is out for delivery."
-          );
+          statusMessages = "Your order is out for delivery.";
           break;
 
         case "Arrived":
           updateFields.arrivalTime = currentTime;
           updateFields.progressSteps = 5;
-          await sendPushNotification(
-            [user.expoPushToken],
-            "Order Update",
-            "Your order has arrived."
-          );
+          statusMessages = "Your order has arrived.";
           break;
 
         case "Delivered":
@@ -1075,17 +1080,25 @@ module.exports = {
             });
           }
 
-          await sendPushNotification(
-            [user.expoPushToken],
-            "Order Update",
-            "Your order has been delivered. Thank you for choosing our service! 😎"
-          );
+          statusMessages =
+            "Your order has been delivered. Thank you for choosing our service! 😎";
 
           const userOrders = await Order.find({ userId });
           if (userOrders.length === 1) {
             await sendFirstOrderThankYouEmail(user.email, user.firstName);
           }
           break;
+      }
+
+      // Check if user has a push token, else send an email
+      if (user.expoPushToken) {
+        await sendPushNotification(
+          [user.expoPushToken],
+          "Order Update",
+          statusMessages
+        );
+      } else {
+        await sendOrderUpdateEmail(user.email, user.firstName, statusMessages);
       }
 
       const updatedOrder = await Order.findByIdAndUpdate(

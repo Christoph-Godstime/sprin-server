@@ -7,17 +7,7 @@ const html = fs.readFileSync("products.html", "utf-8");
 // Load HTML into cheerio
 const $ = cheerio.load(html);
 
-// Load existing data from products.json if it exists
-let existingProducts = [];
-const filePath = "products.json";
-
-if (fs.existsSync(filePath)) {
-  const fileData = fs.readFileSync(filePath, "utf-8");
-  if (fileData.trim()) {
-    existingProducts = JSON.parse(fileData);
-  }
-}
-
+// Extract new products
 const newProducts = [];
 
 $('section[data-test-id="grid-elements"]').each((index, element) => {
@@ -25,23 +15,14 @@ $('section[data-test-id="grid-elements"]').each((index, element) => {
   const price = $(element).find(".product-price__effective").text().trim();
   const imageUrl = $(element).find(".tile__image").attr("src");
 
-  // Check if the product already exists
-  const isDuplicate = existingProducts.some(
-    (product) =>
-      product.title === title &&
-      product.price === price &&
-      product.imageUrl === imageUrl
-  );
-
-  if (!isDuplicate) {
-    newProducts.push({ title, price, imageUrl });
-  }
+  newProducts.push({ title, price, imageUrl });
 });
 
-// Append new products to existing ones
-const updatedProducts = [...existingProducts, ...newProducts];
+// **Overwrite** products.json with new data
+fs.writeFileSync(
+  "products.json",
+  JSON.stringify(newProducts, null, 2),
+  "utf-8"
+);
 
-// Save data to JSON file
-fs.writeFileSync(filePath, JSON.stringify(updatedProducts, null, 2), "utf-8");
-
-console.log("Extraction complete. New products added to products.json.");
+console.log("Extraction complete. products.json has been updated.");

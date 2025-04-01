@@ -7,11 +7,9 @@ fs.readFile("products.json", "utf8", (err, data) => {
     return;
   }
 
-  let products = JSON.parse(data);
-
-  products = products.map((product) => {
+  let products = JSON.parse(data).map((product) => {
     // Extract quantity (handles variations in spacing and case sensitivity)
-    const regex = /(\d+(?:\.\d+)?\s*(ml|g|l|mg|kg|un))/i;
+    const regex = /(\d+(?:\.\d+)?\s*(ml|g|l|mg|kg|un|cl))/i;
     const match = product.title.match(regex);
 
     if (match) {
@@ -30,16 +28,12 @@ fs.readFile("products.json", "utf8", (err, data) => {
     return product;
   });
 
-  // Save the updated JSON file
-  fs.writeFile(
+  // Overwrite updated_products.json with new data
+  fs.writeFileSync(
     "updated_products.json",
     JSON.stringify(products, null, 2),
-    (err) => {
-      if (err) {
-        console.error("Error writing file:", err);
-        return;
-      }
-      console.log("Updated products saved to updated_products.json");
-    }
+    "utf8"
   );
+
+  console.log("Updated products saved to updated_products.json");
 });

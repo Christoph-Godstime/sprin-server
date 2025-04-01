@@ -25,13 +25,13 @@ async function sendFirstOrderThankYouEmail(userEmail, userName) {
             </tr>
             <tr>
               <td style="padding-bottom: 20px; color: #555;">
-               <p>We appreciate you for trusting our food delivery app with your first order here!</p>
+               <p>We appreciate you for trusting our food and grocery delivery app with your first order here!</p>
                 <p>As a token of our gratitude, your next delivery fee is on us!</p>
               <p>We’d love to hear your feedback! On the app, you can drop your reviews and rate:</p>
                 <ul>
                 <li>The food</li>
                 <li>The rider</li>
-                <li>The restaurant</li>
+                <li>The store</li>
                 </ul>
                 <p>If you have feedback about our app, please visit the Customer Support section in the app to share your thoughts. Your feedback is invaluable in helping us improve and ensure a great experience for you and others.</p>
                 <p>Thank you for letting us be a part of your dining experience!</p>
@@ -40,7 +40,12 @@ async function sendFirstOrderThankYouEmail(userEmail, userName) {
             <tr>
               <td style="padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #777;">
                 <p style="margin: 0;">Best regards,</p>
-                <p style="margin: 0; font-weight: bold;">The Food Delivery Team</p>
+                <p style="margin: 0; font-weight: bold;">The Delivery Team</p>
+              </td>
+            </tr>
+             <tr>
+              <td style="padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #777;">
+                <p style="margin: 0; font-size: 12px;">&copy; ${new Date().getFullYear()} Sprin Technologies. All rights reserved.</p>
               </td>
             </tr>
           </table>
