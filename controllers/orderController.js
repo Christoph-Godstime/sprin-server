@@ -1083,7 +1083,10 @@ module.exports = {
           statusMessages =
             "Your order has been delivered. Thank you for choosing our service! 😎";
 
-          const userOrders = await Order.find({ userId });
+          const userOrders = await Order.find({
+            userId,
+            orderStatus: "Delivered",
+          });
           if (userOrders.length === 1) {
             await sendFirstOrderThankYouEmail(user.email, user.firstName);
           }
