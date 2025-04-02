@@ -821,7 +821,7 @@ module.exports = {
           },
         })
         .select(
-          "storeType orderItems serviceFee orderTotal deliveryFee grandTotal walletAmountUsed deliveryAddress paymentMethod paymentStatus orderStatus freeDelivery previouslyAssignedRiders storeSecretCode riderSecretCode preparingTime readyTime riderAssignedTime riderAcceptedTime inTransitTime arrivalTime deliveryTime progressSteps assignedRider"
+          "storeType orderItems serviceFee orderTotal deliveryFee grandTotal walletAmountUsed deliveryAddress paymentMethod paymentStatus orderStatus freeDelivery previouslyAssignedRiders storeSecretCode riderSecretCode preparingTime readyTime riderAssignedTime riderAcceptedTime inTransitTime arrivalTime deliveryTime progressSteps assignedRider createdAt"
         )
         .lean();
 
