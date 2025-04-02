@@ -3,46 +3,49 @@ const AdminContoller = require("../controllers/adminController");
 const {
   verifyTokenAndAuthorization,
   verifyAdmin,
+  verifyStore,
 } = require("../middlewares/verifyToken");
 
-router.post("/register", verifyAdmin, AdminContoller.createAdmin);
+router.post("/register", verifyStore, AdminContoller.createAdmin);
 
 router.post("/login", AdminContoller.loginAdmin);
 
 router.post(
   "/verify-restaurant",
-  verifyAdmin,
+  verifyStore,
   AdminContoller.updateRestaurantStatus
 );
 
-router.post("/verify-rider", verifyAdmin, AdminContoller.updateRiderStatus);
+router.post("/verify-rider", verifyStore, AdminContoller.updateRiderStatus);
 
-router.post("/ratePerKm", verifyAdmin, AdminContoller.createRatePerKm);
+router.post("/ratePerKm", verifyStore, AdminContoller.createRatePerKm);
 
-router.put("/ratePerKm", verifyAdmin, AdminContoller.updateRatePerKm);
+router.put("/ratePerKm", verifyStore, AdminContoller.updateRatePerKm);
 
 router.post(
   "/riderPayout/approve/:payoutRequestId",
-  verifyAdmin,
+  verifyStore,
   AdminContoller.approvePayout
 );
 
 router.get(
   "/payouts/pending",
-  verifyAdmin,
+  verifyStore,
   AdminContoller.getPendingPayoutRequests
 );
 
 router.post(
   "/restaurantPayout/approve/:payoutRequestId",
-  verifyAdmin,
+  verifyStore,
   AdminContoller.restaurantApprovePayout
 );
 
 router.put(
   "/update-commission/:restaurantId",
-  verifyAdmin,
+  verifyStore,
   AdminContoller.updateRestaurantCommission
 );
+
+router.get("/orders/pending", verifyStore, AdminContoller.getPendingOrders);
 
 module.exports = router;

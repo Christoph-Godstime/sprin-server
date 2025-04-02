@@ -7,6 +7,7 @@ const RiderPaymentHistory = require("../models/RiderPaymentHistory");
 const Payment = require("../models/Payment");
 const PayoutRequest = require("../models/payoutRequest");
 const PaymentHistory = require("../models/PaymentHistory");
+const Order = require("../models/Orders");
 const sendPayoutApprovalEmail = require("../utils/email_payoutApproval");
 const Rate = require("../models/Rate");
 const CryptoJS = require("crypto-js");
@@ -786,6 +787,60 @@ module.exports = {
       res.status(500).json({
         status: false,
         message: "An error occurred while updating the commission.",
+      });
+    }
+  },
+
+  getPendingOrders: async (req, res) => {
+    try {
+      const orders = await Order.find({ orderStatus: { $ne: "Delivered" } })
+        .populate({
+          path: "userId",
+          select:
+            "_id firstName lastName email verified phone userType expoPushToken",
+        })
+        .populate({
+          path: "storeId",
+          select:
+            "coords _id title openingTime closingTime imageUrl isAvailable isActive verification logoUrl rating ratingCount createdAt restaurantCommission",
+          populate: {
+            path: "owner",
+            select:
+              "_id firstName lastName email phone profile expoPushToken createdAt",
+            model: "User",
+          },
+        })
+        .populate({
+          path: "assignedRider",
+          select:
+            "_id vehicleType vehicleBrand plateNumber imageUrl rating ratingCount",
+          populate: {
+            path: "riderProfile",
+            select: "_id firstName lastName email phone profile expoPushToken",
+            model: "User",
+          },
+        })
+        .select(
+          "storeType orderItems serviceFee orderTotal deliveryFee grandTotal walletAmountUsed deliveryAddress paymentMethod paymentStatus orderStatus freeDelivery previouslyAssignedRiders storeSecretCode riderSecretCode preparingTime readyTime riderAssignedTime riderAcceptedTime inTransitTime arrivalTime deliveryTime progressSteps assignedRider"
+        )
+        .lean();
+
+      const availableRiders = await Rider.find({
+        isActive: true,
+        isTakingOrders: true,
+        verification: "Verified",
+      }).populate("riderProfile"); // Populating rider profile details
+
+      return res.json({
+        status: true,
+        orders,
+        availableRiders,
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        status: false,
+        message: error.message,
       });
     }
   },
