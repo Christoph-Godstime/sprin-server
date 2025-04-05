@@ -829,7 +829,20 @@ module.exports = {
         isActive: true,
         isTakingOrders: true,
         verification: "Verified",
-      }).populate("riderProfile"); // Populating rider profile details
+      })
+        .populate({
+          path: "riderProfile",
+          select:
+            "_id firstName lastName email verified phone userType profile expoPushToken",
+        })
+        .populate({
+          path: "assignedOrders",
+          model: "Order",
+        })
+        .select(
+          "point _id startingTime closingTime vehicleType vehicleBrand plateNumber imageUrl isAvailable isActive isTakingOrders verification assignedOrders"
+        )
+        .lean();
 
       return res.json({
         status: true,
