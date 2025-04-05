@@ -113,7 +113,8 @@ module.exports = {
 
       return res.status(201).json({
         status: true,
-        message: "Sign up successful. OTP sent for email verification.",
+        message:
+          "Sign up successful. OTP sent for email verification. Please check your inbox and spam folder.",
       });
     } catch (error) {
       return res.status(500).json({ status: false, message: error.message });
@@ -282,7 +283,13 @@ module.exports = {
 
       await sendResetPasswordEmail(user.email, otp);
 
-      res.status(200).json({ status: true, message: "OTP sent to email" });
+      res
+        .status(200)
+        .json({
+          status: true,
+          message:
+            "OTP sent to email. Please check your inbox and spam folder.",
+        });
     } catch (error) {
       res.status(500).json({ status: false, message: error.message });
     }

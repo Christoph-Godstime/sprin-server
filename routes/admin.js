@@ -48,4 +48,10 @@ router.put(
 
 router.get("/orders/pending", verifyStore, AdminContoller.getPendingOrders);
 
+router.get(
+  "/pending-accounts",
+  verifyStore,
+  AdminContoller.getPendingRestaurantsAndRiders
+);
+
 module.exports = router;

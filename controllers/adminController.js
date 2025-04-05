@@ -844,4 +844,28 @@ module.exports = {
       });
     }
   },
+
+  getPendingRestaurantsAndRiders: async (req, res) => {
+    try {
+      const pendingRestaurants = await Restaurant.find({
+        verification: "Pending",
+      });
+      const pendingRiders = await Rider.find({ verification: "Pending" });
+
+      return res.status(200).json({
+        success: true,
+        message: "Pending restaurants and riders retrieved successfully",
+        pendingRestaurants,
+        pendingRiders,
+      });
+    } catch (error) {
+      console.error("Error fetching pending restaurants and riders:", error);
+      return res.status(500).json({
+        success: false,
+        message:
+          "An error occurred while fetching pending restaurants and riders",
+        error: error.message,
+      });
+    }
+  },
 };
