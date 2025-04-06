@@ -244,26 +244,49 @@ module.exports = {
 
   getRandomGroceries: async (req, res) => {
     const { categoryId, excludeItemId } = req.params; // Get category ID and item ID from request parameters
-  
+
     try {
       const categoryObjectId = new mongoose.Types.ObjectId(categoryId);
       const excludeObjectId = new mongoose.Types.ObjectId(excludeItemId);
-  
+
       const groceries = await Grocery.aggregate([
         {
           $match: {
             category: categoryObjectId, // Match groceries in the given category
             _id: { $ne: excludeObjectId }, // Exclude the given item
-            isAvailable: true // Only include available items
-          }
+            isAvailable: true, // Only include available items
+          },
         },
-        { $sample: { size: 10 } } // Randomly pick 10 items
+        { $sample: { size: 10 } }, // Randomly pick 10 items
       ]);
-  
+
       res.status(200).json({ status: true, groceries });
     } catch (error) {
       console.error("Error fetching random groceries:", error);
       res.status(500).json({ error: error.message, status: false });
+    }
+  },
+
+  toggleGroceryAvailability: async (req, res) => {
+    const { groceryId } = req.params;
+
+    try {
+      const grocery = await Grocery.findById(groceryId);
+
+      if (!grocery) {
+        return res.status(404).json({ message: "Grocery item not found" });
+      }
+
+      grocery.isAvailable = !grocery.isAvailable;
+      await grocery.save();
+
+      res.status(200).json({
+        message: `Grocery availability toggled to ${grocery.isAvailable}`,
+        grocery,
+      });
+    } catch (error) {
+      console.error("Error toggling grocery availability:", error);
+      res.status(500).json({ message: "Internal server error" });
     }
   },
 };

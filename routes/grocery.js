@@ -29,4 +29,10 @@ router.get(
   groceryController.getRandomGroceries
 );
 
+router.patch(
+  "/toggle-availability/:groceryId",
+  verifyStore,
+  groceryController.toggleGroceryAvailability
+);
+
 module.exports = router;
