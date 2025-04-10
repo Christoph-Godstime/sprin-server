@@ -193,12 +193,12 @@ module.exports = {
       const { restaurantId, status, message } = req.body;
 
       // Ensure the user is an admin
-      if (req.user.userType !== "Admin") {
-        return res.status(403).json({
-          status: false,
-          message: "Only admins can update restaurant verification status.",
-        });
-      }
+      // if (req.user.userType !== "Admin") {
+      //   return res.status(403).json({
+      //     status: false,
+      //     message: "Only admins can update restaurant verification status.",
+      //   });
+      // }
 
       // Validate the status
       const validStatuses = ["Verified", "Rejected"];
@@ -307,12 +307,12 @@ module.exports = {
       const { riderId, status, message } = req.body;
 
       // Ensure the user is an admin
-      if (req.user.userType !== "Admin") {
-        return res.status(403).json({
-          status: false,
-          message: "Only admins can update rider verification status.",
-        });
-      }
+      // if (req.user.userType !== "Admin") {
+      //   return res.status(403).json({
+      //     status: false,
+      //     message: "Only admins can update rider verification status.",
+      //   });
+      // }
 
       // Validate the status
       const validStatuses = ["Verified", "Rejected"];

@@ -3,18 +3,19 @@ const categoryController = require("../controllers/categoryController");
 const {
   verifyTokenAndAuthorization,
   verifyAdmin,
+  verifyStore,
 } = require("../middlewares/verifyToken");
 
 // UPADATE category
-router.put("/:id", verifyAdmin, categoryController.updateCategory);
+router.put("/:id", verifyStore, categoryController.updateCategory);
 
-router.post("/", verifyAdmin, categoryController.createCategory);
+router.post("/", verifyStore, categoryController.createCategory);
 
 // DELETE category
 
-router.delete("/:id", verifyAdmin, categoryController.deleteCategory);
+router.delete("/:id", verifyStore, categoryController.deleteCategory);
 
-router.post("/image/:id", verifyAdmin, categoryController.patchCategoryImage);
+router.post("/image/:id", verifyStore, categoryController.patchCategoryImage);
 
 // GET category
 router.get("/", categoryController.getAllCategories);

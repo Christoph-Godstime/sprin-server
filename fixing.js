@@ -1,73 +1,25 @@
 const mongoose = require("mongoose");
-const GroceryCategory = require("./models/GroceryCategory"); // Adjust the path to your Order model
+const Food = require("./models/Food");
 require("dotenv").config();
 
 const categories = [
   {
-    title: "Bakery And Cake",
-    value: "bakery-and-cake",
+    title: "Beers And Ciders",
+    value: "beers-and-ciders",
     imageUrl:
-      "https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/images%2Fbakery%20and%20cake.png?alt=media&token=40d40c38-fa3d-4abd-8392-94434dc2cec2",
+      "https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/images%2FSaJkqumGAVvRcSvJHAadyNZNOB?alt=media&token=d89f4ad5-dea2-41ae-8f98-a67c12519ec5",
   },
   {
-    title: "Fresh Fruits and Vegetables",
-    value: "fresh-fruits-and-vegetables",
+    title: "Spirits",
+    value: "spirits",
     imageUrl:
-      "https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/images%2Ffruits.png?alt=media&token=89c1d75e-3841-4133-affc-4c36041c265a",
+      "https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/images%2FlrLpkeHEdabIUgLERAIZFzIFMd?alt=media&token=fcde16a7-9e65-43b6-a3b1-fbaa07535851",
   },
   {
-    title: "Dairy Products",
-    value: "dairy-products",
+    title: "Wine",
+    value: "wine",
     imageUrl:
-      "https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/images%2Fdairy%20products.png?alt=media&token=d588cc30-5fb3-482f-968e-c52d0a081ec6",
-  },
-  {
-    title: "Frozen Foods and Butchery",
-    value: "frozen-foods-and-butchery",
-    imageUrl:
-      "https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/images%2Ffrozen%20foods%20and%20butchery.png?alt=media&token=886ff5a8-3ec7-488c-a860-2a2e4d914462",
-  },
-  {
-    title: "Non-Alcoholic Drinks",
-    value: "non-alcoholic-drinks",
-    imageUrl:
-      "https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/images%2Fnon-alcoholic%20drinks.png?alt=media&token=028a6736-da1f-42f2-af17-5f1062990094",
-  },
-  {
-    title: "Food Cupboard",
-    value: "food-cupboard",
-    imageUrl:
-      "https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/images%2Ffood%20cupboard.png?alt=media&token=428bb243-aec8-4227-a6e3-ec0af71da6e6",
-  },
-  {
-    title: "Condiments and Sauces",
-    value: "condiments-and-sauces",
-    imageUrl:
-      "https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/images%2Fcondiments%20and%20sauces.png?alt=media&token=09e94432-67b7-498d-8703-c68bd57d0728",
-  },
-  {
-    title: "Stationaries",
-    value: "stationaries",
-    imageUrl:
-      "https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/images%2Fstationaries.png?alt=media&token=c77c7cb6-65fb-41ae-8ce4-46c823c7a816",
-  },
-  {
-    title: "Ice Cream & Desserts",
-    value: "ice-cream-&-desserts",
-    imageUrl:
-      "https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/images%2Fice%20cream%20and%20dessets.png?alt=media&token=2fd0a24e-79e8-4149-8b49-6b411a5a58c2",
-  },
-  {
-    title: "Rice & Pasta",
-    value: "rice-&-pasta",
-    imageUrl:
-      "https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/images%2Fbaby%20products.png?alt=media&token=8335b594-89fc-41c8-81a9-211bf667e784",
-  },
-  {
-    title: "Home Essentials",
-    value: "home-essentials",
-    imageUrl:
-      "https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/images%2Fhome%20essentials.png?alt=media&token=912e32fa-f4bb-4b9c-9686-0d7fde87426d",
+      "https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/images%2FBkTTDyasejXYSNnkTgmSjFQQyb?alt=media&token=841b3fed-e7e3-425e-ac06-20b17a3b9289",
   },
 ];
 
@@ -80,19 +32,43 @@ const fixing = async () => {
 
     console.log("Connected to MongoDB");
 
-    for (const category of categories) {
-      await GroceryCategory.updateOne(
-        { value: category.value },
-        { $set: { imageUrl: category.imageUrl } },
-        { upsert: true }
-      );
-    }
+    const newFood = new Food({
+      title: "Sausage Pizza - Large",
+      restaurantName: "JC Pizza",
+      time: "30",
+      foodTags: ["Cheese", "Sausage Pizza", "Pizza"],
+      category: "6751328ad9a8227f3d67465e",
+      foodType: ["Cheese", "Sausage Pizza", "Pizza"],
+      code: "330105",
+      isAvailable: true,
+      restaurant: "67f5f4ee4534520e07a70a9d",
+      rating: 5,
+      ratingCount: 0,
+      totalRating: 0,
+      description: "Large sausage pizza",
+      price: 16700,
+      additives: [
+        { id: "655727", title: "Extra cheese", price: "2800" },
+        { id: "327315", title: "Extra topping", price: "2300" },
+        { id: "492949", title: "Extra pepperoni", price: "3400" },
+      ],
+      imageUrl: [
+        "https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/images%2FYHIwYidGhdqUqObJhLtEnkgqtc?alt=media&token=123cfc87-40dc-44a6-846b-228194f5fc14",
+        "https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/images%2FYHIwYidGhdqUqObJhLtEnkgqtc?alt=media&token=123cfc87-40dc-44a6-846b-228194f5fc14",
+      ],
+      location: {
+        type: "Point",
+        coordinates: [6.11579, 5.7877439],
+      },
+      feedbacks: [],
+    });
 
-    console.log("Categories updated successfully");
-    mongoose.connection.close();
+    const savedFood = await newFood.save();
+    console.log("Food item added successfully:", savedFood);
   } catch (error) {
-    console.error("Error updating categories:", error);
-    mongoose.connection.close();
+    console.error("Error adding food item:", error);
+  } finally {
+    await mongoose.disconnect();
   }
 };
 

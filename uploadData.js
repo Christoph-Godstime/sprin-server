@@ -61,8 +61,8 @@ const processGroceries = async () => {
       // Save grocery item to MongoDB
       await Grocery.create({
         title,
-        category: new ObjectId("67d1245c8072ec2114163e75"),
-        subCategory: new ObjectId("67e238ac93f90b4a93eb932c"),
+        category: new ObjectId("67f357bd1472f43edb9b3dcf"),
+        subCategory: new ObjectId("67f362714534520e07a6a3ca"),
         groceryStore: new ObjectId("679a64c44733392faf1956d9"),
         price,
         quantity,

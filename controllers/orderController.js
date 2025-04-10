@@ -205,10 +205,10 @@ module.exports = {
         }
       }
 
-      // Calculate Service Fee (3% of orderTotal) and round up to nearest ten
-      const serviceFee = roundToNearestTen(
-        parseFloat((orderTotal * 0.03).toFixed(2))
-      );
+     // Calculate Service Fee: 3% of orderTotal + ₦100, rounded up to nearest ten
+const serviceFee = roundToNearestTen(
+  parseFloat((orderTotal * 0.03 + 100).toFixed(2))
+);
 
       let grandTotal =
         orderTotal +
@@ -245,7 +245,7 @@ module.exports = {
         roundedDeliveryFee, // Rounded delivery fee
         discountedDeliveryFee, // Rounded discounted delivery fee
         riderDeliveryFee, // Rounded rider delivery fee
-        serviceFee, // 3% Service Fee
+        serviceFee, // 3% + 100 flat Service Fee 
         freeDelivery,
         originalWalletBalance,
         walletBalance,
@@ -925,7 +925,10 @@ module.exports = {
   getUserOrders: async (req, res) => {
     const userId = req.user.id;
     try {
-      const orders = await Order.find({ userId })
+      const orders = await Order.find({ 
+          userId,
+          paymentStatus: "Completed" // ✅ Only completed payments
+        })
         .populate("storeId")
         .populate({
           path: "assignedRider",
@@ -935,12 +938,14 @@ module.exports = {
             select: "phone firstName lastName email",
           },
         });
+  
       res.status(200).json({ status: true, data: orders });
     } catch (error) {
       console.log(error);
       res.status(500).json(error);
     }
   },
+  
 
   rateOrder: async (req, res) => {
     const orderId = req.params.id;
