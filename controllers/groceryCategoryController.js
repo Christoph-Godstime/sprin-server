@@ -248,12 +248,12 @@ module.exports = {
     try {
       const excludedTitles = ["Beers And Ciders", "Spirits", "Wine"];
 
-      // const categories = await GroceryCategory.find({}, { __v: 0 });
+      const categories = await GroceryCategory.find({}, { __v: 0 });
 
-      const categories = await GroceryCategory.find(
-        { title: { $nin: excludedTitles } },
-        { __v: 0 }
-      );
+      // const categories = await GroceryCategory.find(
+      //   { title: { $nin: excludedTitles } },
+      //   { __v: 0 }
+      // );
 
       // Shuffle the categories array
       const shuffledCategories = categories.sort(() => Math.random() - 0.5);
@@ -424,15 +424,15 @@ module.exports = {
       const storeId = store._id;
 
       // Fetch all categories
-      // const categories = await GroceryCategory.find(
-      //   {},
-      //   { title: 1, value: 1, imageUrl: 1 }
-      // ).sort({ title: 1 });
-
       const categories = await GroceryCategory.find(
-        { title: { $nin: excludedTitles } },
+        {},
         { title: 1, value: 1, imageUrl: 1 }
       ).sort({ title: 1 });
+
+      // const categories = await GroceryCategory.find(
+      //   { title: { $nin: excludedTitles } },
+      //   { title: 1, value: 1, imageUrl: 1 }
+      // ).sort({ title: 1 });
 
       // Fetch 10 random grocery items for each category from the nearest store
       const categoriesWithGroceries = await Promise.all(
