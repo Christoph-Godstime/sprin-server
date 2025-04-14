@@ -1,6 +1,11 @@
 const mongoose = require("mongoose");
 const Food = require("./models/Food");
 require("dotenv").config();
+const fs = require("fs");
+const path = require("path");
+
+// Grocery model (adjust path if needed)
+const Grocery = require("./models/Grocery");
 
 const categories = [
   {
@@ -32,43 +37,30 @@ const fixing = async () => {
 
     console.log("Connected to MongoDB");
 
-    const newFood = new Food({
-      title: "Sausage Pizza - Large",
-      restaurantName: "JC Pizza",
-      time: "30",
-      foodTags: ["Cheese", "Sausage Pizza", "Pizza"],
-      category: "6751328ad9a8227f3d67465e",
-      foodType: ["Cheese", "Sausage Pizza", "Pizza"],
-      code: "330105",
+    const newGrocery = new Grocery({
+      title: "B. Agofure Peanuts",
+      category: "679f0681ba0df5eed77fa93b", // replace with valid ObjectId
+      subCategory: "67dfb8b8568092ac4c162081", // replace with valid ObjectId
+      groceryStore: "679a64c44733392faf1956d9", // optional, or remove if not using
+      price: 3900,
+      quantity: "SM",
       isAvailable: true,
-      restaurant: "67f5f4ee4534520e07a70a9d",
-      rating: 5,
-      ratingCount: 0,
-      totalRating: 0,
-      description: "Large sausage pizza",
-      price: 16700,
-      additives: [
-        { id: "655727", title: "Extra cheese", price: "2800" },
-        { id: "327315", title: "Extra topping", price: "2300" },
-        { id: "492949", title: "Extra pepperoni", price: "3400" },
-      ],
       imageUrl: [
-        "https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/images%2FYHIwYidGhdqUqObJhLtEnkgqtc?alt=media&token=123cfc87-40dc-44a6-846b-228194f5fc14",
-        "https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/images%2FYHIwYidGhdqUqObJhLtEnkgqtc?alt=media&token=123cfc87-40dc-44a6-846b-228194f5fc14",
+        "https://storage.googleapis.com/sprinfare2024.appspot.com/d2aa7754-8faf-4e75-8361-3437d70682a8.png",
       ],
       location: {
         type: "Point",
-        coordinates: [6.11579, 5.7877439],
+        coordinates: [6.114286556839943, 5.783790830243707],
       },
-      feedbacks: [],
     });
 
-    const savedFood = await newFood.save();
-    console.log("Food item added successfully:", savedFood);
+    const savedGrocery = await newGrocery.save();
+    console.log("Grocery saved:", savedGrocery);
   } catch (error) {
-    console.error("Error adding food item:", error);
+    console.error("Error adding grocery:", error);
   } finally {
     await mongoose.disconnect();
+    console.log("Disconnected from MongoDB");
   }
 };
 

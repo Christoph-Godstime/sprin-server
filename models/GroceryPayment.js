@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
-const storePaymentSchema = new mongoose.Schema({
-  storeId: {
+const groceryPaymentSchema = new mongoose.Schema({
+  groceryStoreId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "GroceryStore",
     required: true,
@@ -28,6 +28,6 @@ const storePaymentSchema = new mongoose.Schema({
   },
 });
 
-const StorePayment = mongoose.model("StorePayment", storePaymentSchema);
+const GroceryPayment = mongoose.model("GroceryPayment", groceryPaymentSchema);
 
-module.exports = StorePayment;
+module.exports = GroceryPayment;

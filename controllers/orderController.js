@@ -7,7 +7,7 @@ const User = require("../models/User");
 const Restaurant = require("../models/Restaurant");
 const Rider = require("../models/Rider");
 const Payment = require("../models/Payment");
-const StorePayment = require("../models/StorePayment");
+const GroceryPayment = require("../models/GroceryPayment");
 const RiderPayment = require("../models/RiderPayment");
 const CompanyRevenue = require("../models/CompanyRevenue");
 const Address = require("../models/Address");
@@ -34,7 +34,7 @@ const processStorePayment = async (order) => {
     if (!store) {
       throw new Error("Restaurant not found");
     }
-    commissionRate = store.restaurantCommission || 0.15; // Default 15%
+    commissionRate = store.restaurantCommission || 0.1; // Default 10%
     paymentModel = Payment;
     paymentQuery = { restaurantId: storeId };
   } else if (storeType === "GroceryStore") {
@@ -43,7 +43,7 @@ const processStorePayment = async (order) => {
       throw new Error("Grocery Store not found");
     }
     commissionRate = store.storeCommission || 0.0; // Default 0%
-    paymentModel = StorePayment;
+    paymentModel = GroceryPayment;
     paymentQuery = { storeId };
   } else {
     throw new Error("Invalid store type");
@@ -205,10 +205,10 @@ module.exports = {
         }
       }
 
-     // Calculate Service Fee: 3% of orderTotal + ₦100, rounded up to nearest ten
-const serviceFee = roundToNearestTen(
-  parseFloat((orderTotal * 0.03 + 100).toFixed(2))
-);
+      // Calculate Service Fee: 3% of orderTotal + ₦100, rounded up to nearest ten
+      const serviceFee = roundToNearestTen(
+        parseFloat((orderTotal * 0.03 + 100).toFixed(2))
+      );
 
       let grandTotal =
         orderTotal +
@@ -245,7 +245,7 @@ const serviceFee = roundToNearestTen(
         roundedDeliveryFee, // Rounded delivery fee
         discountedDeliveryFee, // Rounded discounted delivery fee
         riderDeliveryFee, // Rounded rider delivery fee
-        serviceFee, // 3% + 100 flat Service Fee 
+        serviceFee, // 3% + 100 flat Service Fee
         freeDelivery,
         originalWalletBalance,
         walletBalance,
@@ -925,10 +925,10 @@ const serviceFee = roundToNearestTen(
   getUserOrders: async (req, res) => {
     const userId = req.user.id;
     try {
-      const orders = await Order.find({ 
-          userId,
-          paymentStatus: "Completed" // ✅ Only completed payments
-        })
+      const orders = await Order.find({
+        userId,
+        paymentStatus: "Completed", // ✅ Only completed payments
+      })
         .populate("storeId")
         .populate({
           path: "assignedRider",
@@ -938,14 +938,13 @@ const serviceFee = roundToNearestTen(
             select: "phone firstName lastName email",
           },
         });
-  
+
       res.status(200).json({ status: true, data: orders });
     } catch (error) {
       console.log(error);
       res.status(500).json(error);
     }
   },
-  
 
   rateOrder: async (req, res) => {
     const orderId = req.params.id;

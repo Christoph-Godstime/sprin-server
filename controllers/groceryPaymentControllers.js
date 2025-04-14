@@ -1,25 +1,25 @@
-const RiderPayment = require("../models/RiderPayment");
-const RiderPayoutRequest = require("../models/RiderPayoutRequest");
-const RiderPaymentHistory = require("../models/RiderPaymentHistory");
-const RiderBankDetails = require("../models/RiderBankDetails");
-
+const GroceryPayment = require("../models/GroceryPayment");
+const GroceryPayoutRequest = require("../models/GroceryPayoutRequest");
+const GroceryPaymentHistory = require("../models/GroceryPaymentHistory");
+const GroceryBankDetails = require("../models/GroceryBankDetails");
+const sendGroceryPayoutApprovalEmail = require("../utils/email_groceryPayoutApproval");
 const generateOtp = require("../utils/otp_generator");
 const sendBankDetailsEmail = require("../utils/email_bankDetails");
 const sendPushNotification = require("../utils/sendPushNotification");
 const { getAdminPushTokens } = require("../utils/adminPushTokens");
-const { convertToNigerianTime } = require("../utils/helper");
 
 module.exports = {
   requestPayout: async (req, res) => {
-    const { riderId, bankName, accountNumber, accountName, email } = req.body;
+    const { groceryStoreId, bankName, accountNumber, accountName, email } =
+      req.body;
 
     try {
-      const payment = await RiderPayment.findOne({ riderId });
+      const payment = await GroceryPayment.findOne({ groceryStoreId });
 
       if (!payment) {
         return res.status(404).json({
           status: false,
-          message: "No payment records found for this rider.",
+          message: "No payment records found for this store.",
         });
       }
 
@@ -50,8 +50,8 @@ module.exports = {
       const commissionAmount = payment.unpaid.commission;
 
       // Create payout request
-      const payoutRequest = new RiderPayoutRequest({
-        riderId,
+      const payoutRequest = new GroceryPayoutRequest({
+        groceryStoreId,
         bankName,
         accountNumber,
         accountName,
@@ -76,8 +76,8 @@ module.exports = {
       await payment.save();
 
       // Create payment history entry
-      const paymentHistory = new RiderPaymentHistory({
-        riderId,
+      const paymentHistory = new GroceryPaymentHistory({
+        groceryStoreId,
         amount: amountToRequest,
         status: "Pending",
         paymentMethod: "Bank Transfer",
@@ -110,7 +110,7 @@ module.exports = {
           await sendPushNotification(
             adminPushTokens,
             "Admin Notification - New Payout Request",
-            `A new payout request has been made by rider ID: ${riderId}, Account name: ${accountName} on ${nigerianTime}.`
+            `A new payout request has been made by grocery store ID: ${groceryStoreId}, Account name: ${accountName} on ${nigerianTime}.`
           );
           console.log("Admin notification sent successfully.");
         } catch (notificationError) {
@@ -136,18 +136,20 @@ module.exports = {
   },
 
   getPaymentHistory: async (req, res) => {
-    const { riderId } = req.params;
+    const { groceryStoreId } = req.params;
 
     try {
-      // Find all payment history records for the rider
-      const paymentHistory = await RiderPaymentHistory.find({ riderId })
+      // Find all payment history records for the store
+      const paymentHistory = await GroceryPaymentHistory.find({
+        groceryStoreId,
+      })
         .sort({ requestedAt: -1 }) // Sort by requestedAt in descending order
         .exec();
 
       if (paymentHistory.length === 0) {
         return res.status(404).json({
           status: false,
-          message: "No payment history found for this rider.",
+          message: "No payment history found for this store.",
         });
       }
 
@@ -166,16 +168,16 @@ module.exports = {
   },
 
   getPaymentDetails: async (req, res) => {
-    const { riderId } = req.params; // Assuming req.user contains the rider's details
+    const { groceryStoreId } = req.params; // Assuming req.user contains the store's details
 
     try {
-      // Find the payment details for the rider
-      const paymentDetails = await RiderPayment.findOne({ riderId });
+      // Find the payment details for the store
+      const paymentDetails = await GroceryPayment.findOne({ groceryStoreId });
 
       if (!paymentDetails) {
         return res.status(404).json({
           status: false,
-          message: "No earnings found for this rider.",
+          message: "No earnings found for this store.",
         });
       }
 
@@ -194,15 +196,15 @@ module.exports = {
   },
 
   getBankDetails: async (req, res) => {
-    const { riderId } = req.params;
+    const { groceryStoreId } = req.params;
 
     try {
-      const bankDetails = await RiderBankDetails.findOne({ riderId });
+      const bankDetails = await GroceryBankDetails.findOne({ groceryStoreId });
 
       if (!bankDetails) {
         return res.status(200).json({
           status: true,
-          message: "No bank details found for this rider.",
+          message: "No bank details found for this store.",
           data: null, // Set data to null to indicate no details are found
         });
       }
@@ -222,14 +224,15 @@ module.exports = {
   },
 
   updateBankDetails: async (req, res) => {
-    const { riderId, bankName, accountNumber, accountName, email } = req.body;
+    const { groceryStoreId, bankName, accountNumber, accountName, email } =
+      req.body;
 
     try {
-      let bankDetails = await RiderBankDetails.findOne({ riderId });
+      let bankDetails = await GroceryBankDetails.findOne({ groceryStoreId });
 
       if (!bankDetails) {
-        bankDetails = new RiderBankDetails({
-          riderId,
+        bankDetails = new GroceryBankDetails({
+          groceryStoreId,
           bankName,
           accountNumber,
           accountName,
@@ -267,15 +270,15 @@ module.exports = {
   },
 
   confirmBankDetails: async (req, res) => {
-    const { riderId, confirmationCode } = req.body;
+    const { groceryStoreId, confirmationCode } = req.body;
 
     try {
-      const bankDetails = await RiderBankDetails.findOne({ riderId });
+      const bankDetails = await GroceryBankDetails.findOne({ groceryStoreId });
 
       if (!bankDetails) {
         return res.status(404).json({
           status: false,
-          message: "Bank details not found for this rider.",
+          message: "Bank details not found for this store.",
         });
       }
 

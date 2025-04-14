@@ -53,6 +53,8 @@ const paymentRoute = require("./routes/payment");
 const bankDetails = require("./routes/bankDetails");
 const riderPaymentRoute = require("./routes/riderPayment");
 const riderBankDetails = require("./routes/riderBankDetails");
+const groceryStorePaymentRoute = require("./routes/groceryStorePayment");
+const groceryStoreBankDetails = require("./routes/groceryStoreBankDetails");
 const rider = require("./routes/rider");
 const grocery = require("./routes/grocery");
 const groceryCategory = require("./routes/groceryCategory");
@@ -188,6 +190,8 @@ app.use("/api/payment", paymentRoute);
 app.use("/api/bank-details", bankDetails);
 app.use("/api/rider-payment", riderPaymentRoute);
 app.use("/api/rider-bank-details", riderBankDetails);
+app.use("/api/grocery-store-payment", groceryStorePaymentRoute);
+app.use("/api/grocery-store-bank-details", groceryStoreBankDetails);
 app.use("/api/rider", rider);
 // app.use("/api/v1", paystackRoute);
 app.use(

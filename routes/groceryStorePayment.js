@@ -1,29 +1,29 @@
 const router = require("express").Router();
-const paymentController = require("../controllers/paymentController");
+const paymentController = require("../controllers/groceryPaymentControllers");
 const {
   verifyTokenAndAuthorization,
   verifyAdmin,
-  verifyVendor,
+  verifyStore,
 } = require("../middlewares/verifyToken");
 
 router.post(
   "/payout/request",
   verifyTokenAndAuthorization,
-  verifyVendor,
+  verifyStore,
   paymentController.requestPayout
 );
 
 router.get(
-  "/history/:restaurantId",
+  "/history/:groceryStoreId",
   verifyTokenAndAuthorization,
-  verifyVendor,
+  verifyStore,
   paymentController.getPaymentHistory
 );
 
 router.get(
-  "/details/:restaurantId",
+  "/details/:groceryStoreId",
   verifyTokenAndAuthorization,
-  verifyVendor,
+  verifyStore,
   paymentController.getPaymentDetails
 );
 
