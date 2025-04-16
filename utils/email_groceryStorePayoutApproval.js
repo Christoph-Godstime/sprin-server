@@ -1,7 +1,7 @@
 const nodemailer = require("nodemailer");
 const dotenv = require("dotenv").config();
 
-async function sendPayoutApprovalEmail(email) {
+async function sendGroceyStorePayoutApprovalEmail(email) {
   // SMTP configuration
   const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -58,4 +58,4 @@ async function sendPayoutApprovalEmail(email) {
   }
 }
 
-module.exports = sendPayoutApprovalEmail;
+module.exports = sendGroceyStorePayoutApprovalEmail;

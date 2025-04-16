@@ -25,7 +25,13 @@ router.put("/ratePerKm", verifyStore, AdminContoller.updateRatePerKm);
 router.post(
   "/riderPayout/approve/:payoutRequestId",
   verifyStore,
-  AdminContoller.approvePayout
+  AdminContoller.riderApprovePayout
+);
+
+router.post(
+  "/groceryStorePayout/approve/:payoutRequestId",
+  verifyStore,
+  AdminContoller.groceryStoreApprovePayout
 );
 
 router.get(

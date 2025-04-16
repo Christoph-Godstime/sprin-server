@@ -2,8 +2,11 @@ const User = require("../models/User");
 const Restaurant = require("../models/Restaurant");
 const Rider = require("../models/Rider");
 const RiderPayment = require("../models/RiderPayment");
+const GroceryPayment = require("../models/GroceryPayment");
 const RiderPayoutRequest = require("../models/RiderPayoutRequest");
+const GroceryPayoutRequest = require("../models/GroceryPayoutRequest");
 const RiderPaymentHistory = require("../models/RiderPaymentHistory");
+const GroceryPaymentHistory = require("../models/GroceryPaymentHistory");
 const Payment = require("../models/Payment");
 const PayoutRequest = require("../models/payoutRequest");
 const PaymentHistory = require("../models/PaymentHistory");
@@ -24,6 +27,7 @@ const {
   decapitalize,
 } = require("../utils/helper");
 const sendRiderPayoutApprovalEmail = require("../utils/email_riderPayoutApproval");
+const sendGroceryStorePayoutApprovalEmail = require("../utils/email_groceryStorePayoutApproval");
 
 const generateReferralCode = async () => {
   let referralCode;
@@ -543,13 +547,34 @@ module.exports = {
         })
         .exec();
 
+      // Fetch all pending grocery store payout requests and populate restaurant details
+      const groceryStorePendingRequests = await GroceryPayoutRequest.find({
+        status: "Pending",
+      })
+        .populate({
+          path: "groceryStoreId",
+          model: "GroceryStore",
+          select: "title email", // Include restaurant title and email
+          populate: {
+            path: "owner",
+            model: "User",
+            select: "firstName lastName email phone", // Include owner's details
+          },
+        })
+        .exec();
+
       // Combine both rider and restaurant pending requests into one response
       const combinedRequests = {
         riderPayoutRequests: riderPendingRequests,
         restaurantPayoutRequests: restaurantPendingRequests,
+        groceryStorePayoutRequests: groceryStorePendingRequests,
       };
 
-      if (!riderPendingRequests.length && !restaurantPendingRequests.length) {
+      if (
+        !riderPendingRequests.length &&
+        !restaurantPendingRequests.length &&
+        !groceryStorePendingRequests.length
+      ) {
         return res.status(404).json({
           status: false,
           message: "No pending payout requests found.",
@@ -570,7 +595,7 @@ module.exports = {
     }
   },
 
-  approvePayout: async (req, res) => {
+  riderApprovePayout: async (req, res) => {
     const { payoutRequestId } = req.params;
 
     try {
@@ -725,6 +750,93 @@ module.exports = {
       }
 
       await sendPayoutApprovalEmail(payoutRequest.email);
+
+      res.status(200).json({
+        status: true,
+        message: "Payout request approved successfully",
+        data: payoutRequest,
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: false,
+        message: "An error occurred while approving payout.",
+        error: error.message,
+      });
+    }
+  },
+
+  groceryStoreApprovePayout: async (req, res) => {
+    const { payoutRequestId } = req.params;
+
+    try {
+      const payoutRequest = await GroceryPayoutRequest.findById(
+        payoutRequestId
+      );
+
+      if (!payoutRequest) {
+        return res
+          .status(404)
+          .json({ status: false, message: "Payout request not found." });
+      }
+
+      // Check if the payout request is still pending
+      if (payoutRequest.status !== "Pending") {
+        return res.status(400).json({
+          status: false,
+          message:
+            "This payout request has already been processed or approved.",
+        });
+      }
+
+      const payment = await GroceryPayment.findOne({
+        groceryStoreId: payoutRequest.groceryStoreId,
+      });
+
+      if (!payment) {
+        return res.status(404).json({
+          status: false,
+          message: "No payment records found for this store.",
+        });
+      }
+
+      // Check if the pending withdrawable is enough to fulfill the request
+      if (payment.pending.withdrawable < payoutRequest.amount) {
+        return res.status(400).json({
+          status: false,
+          message: "Insufficient pending funds to approve this payout.",
+        });
+      }
+
+      // Move the amount and commission for this specific request from pending to paid
+      payment.paid.totalOrders += payoutRequest.orderNumber; // Increment totalOrders by the number of orders associated with the payout request
+      payment.paid.withdrawable += payoutRequest.amount;
+      payment.paid.commission += payoutRequest.commissionAmount; // Use commissionAmount from the payout request
+
+      // Reduce the pending values accordingly
+      payment.pending.totalOrders -= payoutRequest.orderNumber; // Decrease totalOrders in pending by the same count
+      payment.pending.withdrawable -= payoutRequest.amount;
+      payment.pending.commission -= payoutRequest.commissionAmount; // Reduce by the specific commission amount
+
+      await payment.save();
+
+      // Update the payout request status to 'Approved'
+      payoutRequest.status = "Approved";
+      await payoutRequest.save();
+
+      // Update payment history entry
+      const paymentHistory = await GroceryPaymentHistory.findOne({
+        groceryStoreId: payoutRequest.groceryStoreId,
+        amount: payoutRequest.amount,
+        status: "Pending",
+      });
+
+      if (paymentHistory) {
+        paymentHistory.status = "Completed";
+        paymentHistory.completedAt = new Date();
+        await paymentHistory.save();
+      }
+
+      await sendGroceryStorePayoutApprovalEmail(payoutRequest.email);
 
       res.status(200).json({
         status: true,

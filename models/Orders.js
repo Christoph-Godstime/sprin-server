@@ -54,6 +54,11 @@ const orderSchema = new mongoose.Schema(
       required: true,
     },
     paymentMethod: { type: String },
+    reference: {
+      type: String,
+      required: true,
+      unique: true,
+    },
     paymentStatus: {
       type: String,
       default: "Pending",

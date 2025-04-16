@@ -2,7 +2,6 @@ const GroceryPayment = require("../models/GroceryPayment");
 const GroceryPayoutRequest = require("../models/GroceryPayoutRequest");
 const GroceryPaymentHistory = require("../models/GroceryPaymentHistory");
 const GroceryBankDetails = require("../models/GroceryBankDetails");
-const sendGroceryPayoutApprovalEmail = require("../utils/email_groceryPayoutApproval");
 const generateOtp = require("../utils/otp_generator");
 const sendBankDetailsEmail = require("../utils/email_bankDetails");
 const sendPushNotification = require("../utils/sendPushNotification");
