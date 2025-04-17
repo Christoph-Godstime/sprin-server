@@ -43,8 +43,8 @@ exports.paystackWebhook = async (req, res) => {
 
     // Check if paymentStatus is already "Completed"
 
-    // const existingOrder = await Order.findOne({ reference });
-    const existingOrder = await Order.findById(reference);
+    const existingOrder = await Order.findOne({ reference });
+    // const existingOrder = await Order.findById(reference);
     if (!existingOrder) {
       return res
         .status(404)

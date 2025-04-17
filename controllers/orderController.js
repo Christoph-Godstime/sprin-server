@@ -44,7 +44,7 @@ const processStorePayment = async (order) => {
     }
     commissionRate = store.storeCommission || 0.0; // Default 0%
     paymentModel = GroceryPayment;
-    paymentQuery = { storeId };
+    paymentQuery = { groceryStoreId: storeId };
   } else {
     throw new Error("Invalid store type");
   }
