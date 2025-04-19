@@ -322,7 +322,13 @@ module.exports = {
     const { id } = req.params;
     const { coordinates } = req.body;
 
-    if (!Array.isArray(coordinates) || coordinates.length !== 2) {
+    // Hardcoded coordinates: [longitude, latitude]
+    const hardcodedCoordinates = [6.1155583, 5.7845848];
+
+    if (
+      !Array.isArray(hardcodedCoordinates) ||
+      hardcodedCoordinates.length !== 2
+    ) {
       return res.status(400).json({
         error:
           "Coordinates must be an array of two numbers [longitude, latitude].",
@@ -335,12 +341,12 @@ module.exports = {
         return res.status(404).json({ message: "Rider not found" });
       }
 
-      rider.point.coordinates = coordinates;
+      rider.point.hardcodedCoordinates = hardcodedCoordinates;
       await rider.save();
 
       res.status(200).json({
         message: "Rider coordinates updated successfully.",
-        data: rider.point.coordinates,
+        data: rider.point.hardcodedCoordinates,
       });
     } catch (error) {
       res.status(500).json({ status: false, message: error.message });

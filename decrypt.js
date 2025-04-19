@@ -2,7 +2,7 @@ require("dotenv").config();
 const CryptoJS = require("crypto-js");
 
 // Replace with your actual encrypted password and secret
-const encryptedPassword = "U2FsdGVkX18Mg8aGxhafDv/N61fp8JFtS+QbCHKQb7I=";
+const encryptedPassword = "U2FsdGVkX1/6/HajTq2nYs45LgLcAyEDLJWHMTsuVzQ=";
 const secret = process.env.SECRET; // or use process.env.SECRET
 
 function decryptPassword(encrypted, secretKey) {
