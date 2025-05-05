@@ -246,11 +246,13 @@ module.exports = {
 
   getStoreGroceryCategories: async (req, res) => {
     try {
-      const excludedTitles = [
-        "Frozen Foods and Butchery",
-        "Fresh Fruits and Vegetables",
-        "Ice Cream & Desserts",
-      ];
+      const excludedTitles = ["Beers And Ciders", "Spirits", "Wine"];
+
+      // const excludedTitles = [
+      //   "Frozen Foods and Butchery",
+      //   "Fresh Fruits and Vegetables",
+      //   "Ice Cream & Desserts",
+      // ];
 
       // const categories = await GroceryCategory.find({}, { __v: 0 });
 
@@ -387,11 +389,13 @@ module.exports = {
       const longitude = parseFloat(req.query.lng);
       const radius = 10000; // 10 km radius
 
-      const excludedTitles = [
-        "Frozen Foods and Butchery",
-        "Fresh Fruits and Vegetables",
-        "Ice Cream & Desserts",
-      ];
+      const excludedTitles = ["Beers And Ciders", "Spirits", "Wine"];
+
+      // const excludedTitles = [
+      //   "Frozen Foods and Butchery",
+      //   "Fresh Fruits and Vegetables",
+      //   "Ice Cream & Desserts",
+      // ];
 
       if (!latitude || !longitude) {
         return res
