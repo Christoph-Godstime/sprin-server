@@ -1243,7 +1243,7 @@ module.exports = {
           select: "vehicleType vehicleBrand plateNumber imageUrl point",
           populate: {
             path: "riderProfile",
-            select: "phone firstName lastName email",
+            select: "phone firstName lastName email expoPushToken",
           },
         })
         .populate({
@@ -1283,7 +1283,7 @@ module.exports = {
         console.log("Rider socket ID not found");
       }
 
-      const riderPushToken = parcels.assignedRider.riderProfile?.expoPushToken;
+      const riderPushToken = parcels.assignedRider?.riderProfile?.expoPushToken;
 
       if (riderPushToken) {
         await sendPushNotification(

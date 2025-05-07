@@ -1,63 +1,75 @@
 const router = require("express").Router();
-const AdminContoller = require("../controllers/adminController");
+const AdminController = require("../controllers/adminController");
 const {
   verifyTokenAndAuthorization,
   verifyAdmin,
   verifyStore,
 } = require("../middlewares/verifyToken");
 
-router.post("/register", verifyStore, AdminContoller.createAdmin);
+router.post("/register", verifyStore, AdminController.createAdmin);
 
-router.post("/login", AdminContoller.loginAdmin);
+router.post("/login", AdminController.loginAdmin);
 
 router.post(
   "/verify-restaurant",
   verifyStore,
-  AdminContoller.updateRestaurantStatus
+  AdminController.updateRestaurantStatus
 );
 
-router.post("/verify-rider", verifyStore, AdminContoller.updateRiderStatus);
+router.post("/verify-rider", verifyStore, AdminController.updateRiderStatus);
 
-router.post("/ratePerKm", verifyStore, AdminContoller.createRatePerKm);
+router.post("/ratePerKm", verifyStore, AdminController.createRatePerKm);
 
-router.put("/ratePerKm", verifyStore, AdminContoller.updateRatePerKm);
+router.put("/ratePerKm", verifyStore, AdminController.updateRatePerKm);
 
 router.post(
   "/riderPayout/approve/:payoutRequestId",
   verifyStore,
-  AdminContoller.riderApprovePayout
+  AdminController.riderApprovePayout
 );
 
 router.post(
   "/groceryStorePayout/approve/:payoutRequestId",
   verifyStore,
-  AdminContoller.groceryStoreApprovePayout
+  AdminController.groceryStoreApprovePayout
 );
 
 router.get(
   "/payouts/pending",
   verifyStore,
-  AdminContoller.getPendingPayoutRequests
+  AdminController.getPendingPayoutRequests
 );
 
 router.post(
   "/restaurantPayout/approve/:payoutRequestId",
   verifyStore,
-  AdminContoller.restaurantApprovePayout
+  AdminController.restaurantApprovePayout
 );
 
 router.put(
   "/update-commission/:restaurantId",
   verifyStore,
-  AdminContoller.updateRestaurantCommission
+  AdminController.updateRestaurantCommission
 );
 
-router.get("/orders/pending", verifyStore, AdminContoller.getPendingOrders);
+router.get("/orders/pending", verifyStore, AdminController.getPendingOrders);
 
 router.get(
   "/pending-accounts",
   verifyStore,
-  AdminContoller.getPendingRestaurantsAndRiders
+  AdminController.getPendingRestaurantsAndRiders
+);
+
+router.put(
+  "/orders/:orderId/mark-payment-completed",
+  verifyStore,
+  AdminController.markPaymentAsCompleted
+);
+
+router.get(
+  "/orders/today-pending",
+  verifyStore,
+  AdminController.getTodaysPendingOrders
 );
 
 module.exports = router;

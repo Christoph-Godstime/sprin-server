@@ -352,4 +352,33 @@ module.exports = {
       res.status(500).json({ status: false, message: error.message });
     }
   },
+
+  // updateRiderCoordinate: async (req, res) => {
+  //   const { id } = req.params;
+  //   const { coordinates } = req.body;
+
+  //   if (!Array.isArray(coordinates) || coordinates.length !== 2) {
+  //     return res.status(400).json({
+  //       error:
+  //         "Coordinates must be an array of two numbers [longitude, latitude].",
+  //     });
+  //   }
+  //   try {
+  //     const rider = await Rider.findById(id);
+
+  //     if (!rider) {
+  //       return res.status(404).json({ message: "Rider not found" });
+  //     }
+
+  //     rider.point.coordinates = coordinates;
+  //     await rider.save();
+
+  //     res.status(200).json({
+  //       message: "Rider coordinates updated successfully.",
+  //       data: rider.point.coordinates,
+  //     });
+  //   } catch (error) {
+  //     res.status(500).json({ status: false, message: error.message });
+  //   }
+  // },
 };

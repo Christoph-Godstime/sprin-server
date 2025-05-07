@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const Restaurant = require("../models/Restaurant");
+const GroceryStore = require("../models/GroceryStore");
 const Rider = require("../models/Rider");
 const RiderPayment = require("../models/RiderPayment");
 const GroceryPayment = require("../models/GroceryPayment");
@@ -991,6 +992,72 @@ module.exports = {
           "An error occurred while fetching pending restaurants and riders",
         error: error.message,
       });
+    }
+  },
+
+  getTodaysPendingOrders: async (req, res) => {
+    try {
+      const startOfDay = new Date();
+      startOfDay.setUTCHours(0, 0, 0, 0);
+
+      const endOfDay = new Date();
+      endOfDay.setUTCHours(23, 59, 59, 999);
+
+      // Add the 'paymentStatus' condition to filter only pending payments
+      const orders = await Order.find({
+        orderStatus: "Placed",
+        paymentStatus: "Pending", // Filter by payment status
+        orderDate: { $gte: startOfDay, $lte: endOfDay },
+      })
+        .select(
+          "_id userId storeType grandTotal paymentStatus orderDate reference storeId"
+        )
+        .populate("userId", "_id firstName lastName email phone")
+        .lean();
+
+      for (const order of orders) {
+        if (order.storeType === "Restaurant") {
+          const store = await Restaurant.findById(order.storeId)
+            .select("_id title")
+            .lean();
+          order.store = store;
+        } else if (order.storeType === "GroceryStore") {
+          const store = await GroceryStore.findById(order.storeId)
+            .select("_id title")
+            .lean();
+          order.store = store;
+        }
+
+        // Remove storeId since we don't want it in final output
+        delete order.storeId;
+      }
+
+      res.status(200).json({ success: true, orders });
+    } catch (error) {
+      console.error("Error fetching today's pending orders:", error);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  },
+  markPaymentAsCompleted: async (req, res) => {
+    try {
+      const { orderId } = req.params;
+
+      const order = await Order.findById(orderId);
+      if (!order) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Order not found" });
+      }
+
+      order.paymentStatus = "Completed";
+      await order.save();
+
+      res
+        .status(200)
+        .json({ success: true, message: "Payment marked as completed", order });
+    } catch (error) {
+      console.error("Error updating payment status:", error);
+      res.status(500).json({ success: false, message: "Server error" });
     }
   },
 };
