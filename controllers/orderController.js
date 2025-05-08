@@ -780,6 +780,30 @@ module.exports = {
 
       await order.save();
 
+      let adminPushTokens = [];
+      try {
+        adminPushTokens = (await getAdminPushTokens()) || [];
+      } catch (error) {
+        console.error("Error fetching admin push tokens:", error.message);
+      }
+
+      if (adminPushTokens.length > 0) {
+        try {
+          const nigerianTime = convertToNigerianTime(order.createdAt);
+          await sendPushNotification(
+            adminPushTokens,
+            "Admin Notification - Pending Payment",
+            `Order placed but pending payment on ${nigerianTime}.`
+          );
+          console.log("Admin notification sent successfully.");
+        } catch (notificationError) {
+          console.error(
+            "Error sending admin notification:",
+            notificationError.message
+          );
+        }
+      }
+
       res.status(201).json({
         status: true,
         message: "Order placed successfully",
@@ -1284,6 +1308,8 @@ module.exports = {
       }
 
       const riderPushToken = parcels.assignedRider?.riderProfile?.expoPushToken;
+
+      console.log("assigned rider details: ", parcels.assignedRider);
 
       if (riderPushToken) {
         await sendPushNotification(
