@@ -906,7 +906,17 @@ module.exports = {
 
   getPendingOrders: async (req, res) => {
     try {
-      const orders = await Order.find({ orderStatus: { $ne: "Delivered" } })
+      // Get the start and end of the current day
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const endOfDay = new Date();
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const orders = await Order.find({
+        orderStatus: { $ne: "Delivered" },
+        createdAt: { $gte: startOfDay, $lte: endOfDay },
+      })
         .populate({
           path: "userId",
           select:
@@ -932,6 +942,11 @@ module.exports = {
             select: "_id firstName lastName email phone profile expoPushToken",
             model: "User",
           },
+        })
+        .populate({
+          path: "deliveryAddress",
+          select:
+            "addressLine1 postalCode deliveryInstructions latitude longitude",
         })
         .select(
           "storeType orderItems serviceFee orderTotal deliveryFee grandTotal walletAmountUsed deliveryAddress paymentMethod paymentStatus orderStatus freeDelivery previouslyAssignedRiders storeSecretCode riderSecretCode preparingTime readyTime riderAssignedTime riderAcceptedTime inTransitTime arrivalTime deliveryTime progressSteps assignedRider createdAt"
@@ -970,7 +985,6 @@ module.exports = {
       });
     }
   },
-
   getPendingRestaurantsAndRiders: async (req, res) => {
     try {
       const pendingRestaurants = await Restaurant.find({
@@ -1058,6 +1072,22 @@ module.exports = {
     } catch (error) {
       console.error("Error updating payment status:", error);
       res.status(500).json({ success: false, message: "Server error" });
+    }
+  },
+
+  getIncompleteDeliveries: async (req, res) => {
+    try {
+      const orders = await Order.find({
+        paymentStatus: "Completed",
+        orderStatus: { $ne: "Delivered" },
+      })
+        .populate("deliveryAddress")
+        .sort({ createdAt: -1 });
+
+      return res.status(200).json(orders);
+    } catch (error) {
+      console.error("Failed to fetch incomplete deliveries:", error);
+      return res.status(500).json({ message: "Server error fetching orders" });
     }
   },
 };
