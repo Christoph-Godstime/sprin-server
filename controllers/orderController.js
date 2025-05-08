@@ -153,12 +153,23 @@ module.exports = {
       walletBalance = user.walletBalance;
       const originalWalletBalance = user.walletBalance;
 
-      // Check free delivery eligibility
+      // Check if today is free delivery promo day (May 8, 2025)
+      const today = new Date();
+      const isFreeDeliveryDay =
+        today.getFullYear() === 2025 &&
+        today.getMonth() === 4 && // May = 4 (0-indexed)
+        today.getDate() === 8;
+
       const orderCount = await Order.countDocuments({
         userId: new mongoose.Types.ObjectId(userId),
         paymentStatus: "Completed",
       });
-      freeDelivery = orderCount % 10 === 0 || orderCount % 10 === 1;
+
+      if (isFreeDeliveryDay) {
+        freeDelivery = true;
+      } else {
+        freeDelivery = orderCount % 10 === 0 || orderCount % 10 === 1;
+      }
 
       let discountedDeliveryFee = roundedDeliveryFee;
       if (freeDelivery) {
