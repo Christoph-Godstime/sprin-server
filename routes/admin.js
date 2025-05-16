@@ -72,4 +72,6 @@ router.get(
   AdminController.getTodaysPendingOrders
 );
 
+router.get("/incomplete-deliveries", AdminController.getIncompleteDeliveries);
+
 module.exports = router;
