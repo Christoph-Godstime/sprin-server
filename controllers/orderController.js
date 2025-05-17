@@ -1318,9 +1318,11 @@ module.exports = {
         console.log("Rider socket ID not found");
       }
 
-      const riderPushToken = parcels.assignedRider?.riderProfile?.expoPushToken;
+      const parcel = parcels[0];
 
-      console.log("assigned rider details: ", parcels.assignedRider);
+      const riderPushToken = parcel?.assignedRider?.riderProfile?.expoPushToken;
+
+      console.log("assigned rider details: ", parcel.assignedRider);
 
       if (riderPushToken) {
         await sendPushNotification(
@@ -1341,10 +1343,10 @@ module.exports = {
 
       if (adminPushTokens.length > 0) {
         try {
-          const nigerianTime = convertToNigerianTime(parcels.orderDate);
+          const nigerianTime = convertToNigerianTime(parcel.orderDate);
           await sendPushNotification(
             "Admin Notification - New Rider Order",
-            `A new order for ${parcels.assignedRider.riderProfile.firstName} on ${nigerianTime} | ${parcels.assignedRider.riderProfile.phone}.`
+            `A new order for ${parcel.assignedRider.riderProfile.firstName} on ${nigerianTime} | ${parcel.assignedRider.riderProfile.phone}.`
           );
           console.log("Admin notification sent successfully.");
         } catch (notificationError) {

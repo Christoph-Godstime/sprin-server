@@ -253,12 +253,15 @@ module.exports = {
       //   "Beers And Ciders",
       //   "Spirits",
       //   "Wine",
+      //   "Personal Care"
       // ];
 
       const excludedTitles = [
         "Frozen Foods and Butchery",
         "Fresh Fruits and Vegetables",
         "Ice Cream & Desserts",
+        "Wine",
+        "Personal Care",
       ];
 
       // const categories = await GroceryCategory.find({}, { __v: 0 });
@@ -403,12 +406,15 @@ module.exports = {
       //   "Beers And Ciders",
       //   "Spirits",
       //   "Wine",
+      //   "Personal Care"
       // ];
 
       const excludedTitles = [
         "Frozen Foods and Butchery",
         "Fresh Fruits and Vegetables",
         "Ice Cream & Desserts",
+        "Wine",
+        "Personal Care",
       ];
 
       if (!latitude || !longitude) {
