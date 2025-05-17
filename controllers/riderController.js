@@ -341,12 +341,12 @@ module.exports = {
         return res.status(404).json({ message: "Rider not found" });
       }
 
-      rider.point.hardcodedCoordinates = hardcodedCoordinates;
+      rider.point.coordinates = hardcodedCoordinates;
       await rider.save();
 
       res.status(200).json({
         message: "Rider coordinates updated successfully.",
-        data: rider.point.hardcodedCoordinates,
+        data: rider.point.coordinates,
       });
     } catch (error) {
       res.status(500).json({ status: false, message: error.message });
