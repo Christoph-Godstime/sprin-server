@@ -158,7 +158,7 @@ module.exports = {
       const isFreeDeliveryDay =
         today.getFullYear() === 2025 &&
         today.getMonth() === 4 && // May = 4 (0-indexed)
-        today.getDate() === 12;
+        today.getDate() === 21;
 
       const orderCount = await Order.countDocuments({
         userId: new mongoose.Types.ObjectId(userId),
