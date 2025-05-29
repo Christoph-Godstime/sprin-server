@@ -20,6 +20,7 @@ const sendFirstOrderThankYouEmail = require("../utils/email_firstOrderMessage");
 const sendReferralRewardEmail = require("../utils/sendReferralRewardEmail");
 const sendNewOrderNotificationEmail = require("../utils/sendNewOrderNotificationEmail");
 const sendOrderUpdateEmail = require("../utils/sendOrderUpdateEmail");
+const adminEmailNotification = require("../utils/adminEmailNotification");
 
 const generateSecretCode = () => {
   return Math.floor(1000 + Math.random() * 9000).toString();
@@ -327,9 +328,12 @@ module.exports = {
 
         const updatedOrder = await Order.findById(orderId)
           .select(
-            "userId deliveryAddress orderItems deliveryFee storeId storeType orderStatus storeCoords recipientCoords paymentStatus orderDate storeSecretCode riderSecretCode updatedAt freeDelivery serviceFee"
+            "userId deliveryAddress orderItems deliveryFee storeId storeType orderStatus storeCoords recipientCoords paymentStatus orderDate storeSecretCode riderSecretCode updatedAt freeDelivery serviceFee orderTotal grandTotal"
           )
-          .populate({ path: "userId", select: "phone profile" })
+          .populate({
+            path: "userId",
+            select: "phone profile firstName lastName",
+          })
           .populate({
             path: "storeId",
             select: "title imageUrl logoUrl time",
@@ -344,7 +348,7 @@ module.exports = {
           })
           .populate({
             path: "deliveryAddress",
-            select: "addressLine1 latitude longitude",
+            select: "addressLine1 latitude longitude deliveryInstructions",
           });
 
         const storeOwnerPushToken = updatedOrder.storeId.owner?.expoPushToken;
@@ -437,6 +441,8 @@ module.exports = {
               "Admin Notification - New Restaurant Order",
               `A new order for ${updatedOrder.storeId.title} on ${nigerianTime} | ${updatedOrder.storeId.owner?.phone}.`
             );
+            await adminEmailNotification(updatedOrder);
+
             console.log("Admin notification sent successfully.");
           } catch (notificationError) {
             console.error(
@@ -492,16 +498,17 @@ module.exports = {
 
       const updatedOrder = await Order.findById(orderId)
         .select(
-          "userId deliveryAddress orderItems deliveryFee storeId storeType orderStatus storeCoords recipientCoords paymentStatus orderDate storeSecretCode riderSecretCode updatedAt freeDelivery serviceFee"
+          "userId deliveryAddress orderItems deliveryFee storeId storeType orderStatus storeCoords recipientCoords paymentStatus orderDate storeSecretCode riderSecretCode updatedAt freeDelivery serviceFee orderTotal grandTotal"
         )
-        .populate({ path: "userId", select: "phone profile" })
+        .populate({
+          path: "userId",
+          select: "phone profile firstName lastName",
+        })
         .populate({
           path: "storeId",
-
           select: "title imageUrl logoUrl time",
           populate: {
             path: "owner",
-
             select: "expoPushToken firstName lastName phone email",
           },
         })
@@ -511,9 +518,8 @@ module.exports = {
         })
         .populate({
           path: "deliveryAddress",
-          select: "addressLine1 latitude longitude",
+          select: "addressLine1 latitude longitude deliveryInstructions",
         });
-
       const storeOwnerPushToken = updatedOrder.storeId.owner?.expoPushToken;
 
       const storeOwnerEmail = updatedOrder.storeId.owner?.email;
@@ -606,6 +612,7 @@ module.exports = {
             "Admin Notification - New Restaurant Order",
             `A new order for ${updatedOrder.storeId.title} on ${nigerianTime} | ${updatedOrder.storeId.owner?.phone}.`
           );
+          await adminEmailNotification(updatedOrder);
           console.log("Admin notification sent successfully.");
         } catch (notificationError) {
           console.error(

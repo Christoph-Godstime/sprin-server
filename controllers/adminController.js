@@ -1090,4 +1090,29 @@ module.exports = {
       return res.status(500).json({ message: "Server error fetching orders" });
     }
   },
+
+  getRestaurantWithOwnerDetails: async (req, res) => {
+    try {
+      const restaurants = await Restaurant.find()
+        .populate("owner", "-otp -resetPasswordToken -resetPasswordExpires")
+        .exec();
+
+      // Extract only unique owners from the restaurants
+      const uniqueOwnersMap = new Map();
+
+      restaurants.forEach((restaurant) => {
+        const owner = restaurant.owner;
+        if (owner && !uniqueOwnersMap.has(owner._id.toString())) {
+          uniqueOwnersMap.set(owner._id.toString(), owner);
+        }
+      });
+
+      const uniqueOwners = Array.from(uniqueOwnersMap.values());
+
+      res.status(200).json(uniqueOwners);
+    } catch (error) {
+      console.error("Error fetching restaurant owners:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  },
 };

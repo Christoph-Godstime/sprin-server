@@ -72,4 +72,10 @@ router.get(
   AdminController.getTodaysPendingOrders
 );
 
+router.get(
+  "/restaurant-owners",
+  verifyStore,
+  AdminController.getRestaurantWithOwnerDetails
+);
+
 module.exports = router;

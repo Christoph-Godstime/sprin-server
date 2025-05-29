@@ -8,6 +8,7 @@ const { getAdminPushTokens } = require("../utils/adminPushTokens");
 const { convertToNigerianTime } = require("../utils/helper");
 const sendReferralRewardEmail = require("../utils/sendReferralRewardEmail");
 const sendNewOrderNotificationEmail = require("../utils/sendNewOrderNotificationEmail");
+const adminEmailNotification = require("../utils/adminEmailNotification");
 
 exports.paystackWebhook = async (req, res) => {
   try {
@@ -88,16 +89,17 @@ exports.paystackWebhook = async (req, res) => {
 
       const updatedOrder = await Order.findById(orderId)
         .select(
-          "userId deliveryAddress orderItems deliveryFee storeId storeType orderStatus storeCoords recipientCoords paymentStatus orderDate storeSecretCode riderSecretCode updatedAt freeDelivery serviceFee"
+          "userId deliveryAddress orderItems deliveryFee storeId storeType orderStatus storeCoords recipientCoords paymentStatus orderDate storeSecretCode riderSecretCode updatedAt freeDelivery serviceFee orderTotal grandTotal"
         )
-        .populate({ path: "userId", select: "phone profile" })
+        .populate({
+          path: "userId",
+          select: "phone profile firstName lastName",
+        })
         .populate({
           path: "storeId",
-
           select: "title imageUrl logoUrl time",
           populate: {
             path: "owner",
-
             select: "expoPushToken firstName lastName phone email",
           },
         })
@@ -107,7 +109,7 @@ exports.paystackWebhook = async (req, res) => {
         })
         .populate({
           path: "deliveryAddress",
-          select: "addressLine1 latitude longitude",
+          select: "addressLine1 latitude longitude deliveryInstructions",
         });
 
       const storeOwnerPushToken = updatedOrder.storeId.owner?.expoPushToken;
@@ -200,6 +202,7 @@ exports.paystackWebhook = async (req, res) => {
             "Admin Notification - New Restaurant Order",
             `A new order for ${updatedOrder.storeId.title} on ${nigerianTime} | ${updatedOrder.storeId.owner?.phone}.`
           );
+          await adminEmailNotification(updatedOrder);
           console.log("Admin notification sent successfully.");
         } catch (notificationError) {
           console.error(
