@@ -647,7 +647,7 @@ module.exports = {
       const { storeId, storeType, orderItems, orderTotal } = req.body;
 
       // Check if orderTotal is below 1000
-      if (orderTotal < 1000) {
+      if (orderTotal < 2000) {
         return res.status(400).json({
           status: false,
           message:
