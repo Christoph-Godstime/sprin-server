@@ -646,12 +646,12 @@ module.exports = {
     try {
       const { storeId, storeType, orderItems, orderTotal } = req.body;
 
-      // Check if orderTotal is below 1000
+      // Check if orderTotal is below 2000
       if (orderTotal < 2000) {
         return res.status(400).json({
           status: false,
           message:
-            "The minimum order amount is ₦1,000. You cannot place an order below this amount. Please add more items to your cart to meet the minimum order requirement.",
+            "The minimum order amount is ₦2,000. You cannot place an order below this amount. Please add more items to your cart to meet the minimum order requirement.",
         });
       }
 
