@@ -139,7 +139,9 @@ module.exports = {
       const roundToNearestTen = (value) => Math.ceil(value / 10) * 10;
 
       // Ensure minimum delivery fee is 500
-      const normalDeliveryFee = deliveryFee < 500 ? 500 : deliveryFee;
+      // const normalDeliveryFee = deliveryFee < 500 ? 500 : deliveryFee;
+
+      const normalDeliveryFee = 1000;
 
       // Round up deliveryFee to the nearest ten
       const roundedDeliveryFee = roundToNearestTen(normalDeliveryFee);
@@ -166,10 +168,14 @@ module.exports = {
         paymentStatus: "Completed",
       });
 
-      if (isFreeDeliveryDay) {
-        freeDelivery = true;
+      if (orderTotal >= 5000) {
+        if (isFreeDeliveryDay) {
+          freeDelivery = true;
+        } else {
+          freeDelivery = orderCount % 10 === 0 || orderCount % 10 === 1;
+        }
       } else {
-        freeDelivery = orderCount % 10 === 0 || orderCount % 10 === 1;
+        freeDelivery = false;
       }
 
       let discountedDeliveryFee = roundedDeliveryFee;
@@ -200,6 +206,11 @@ module.exports = {
             promoCodeStatus = {
               valid: false,
               message: "Promo code can only be used on your first order.",
+            };
+          } else if (orderTotal < 5000) {
+            promoCodeStatus = {
+              valid: false,
+              message: "Promo code requires a minimum order of ₦5000.",
             };
           } else {
             discountAmount = 500;
