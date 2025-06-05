@@ -17,7 +17,7 @@ async function adminEmailNotification(order) {
       <td>${item.title}</td>
       <td>${item.quantity}</td>
       <td>₦${item.price}</td>
-      <td>${item?.additives?.join(", ") || "None"}</td>
+      <td>${item?.additives?.title?.additivesjoin(", ") || "None"}</td>
       <td>${item.instructions || "None"}</td>
     </tr>
   `
