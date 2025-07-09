@@ -15,7 +15,7 @@ const restaurantSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    restaurantCommission: { type: Number, default: 0.10 },
+    restaurantCommission: { type: Number, default: 0.0 },
     isAvailable: { type: Boolean, default: true },
     isActive: {
       type: Boolean,

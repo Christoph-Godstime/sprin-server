@@ -172,7 +172,7 @@ module.exports = {
         if (isFreeDeliveryDay) {
           freeDelivery = true;
         } else {
-          freeDelivery = orderCount % 10 === 0 || orderCount % 10 === 1;
+          freeDelivery = orderCount % 10 === 0;
         }
       } else {
         freeDelivery = false;
