@@ -42,7 +42,7 @@ const processStorePayment = async (order) => {
     if (!store) {
       throw new Error("Grocery Store not found");
     }
-    commissionRate = store.storeCommission || 0.0; // Default 0%
+    commissionRate = store.storeCommission || 0.1; // Default 0%
     paymentModel = GroceryPayment;
     paymentQuery = { groceryStoreId: storeId };
   } else {
