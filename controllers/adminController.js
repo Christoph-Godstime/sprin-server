@@ -29,6 +29,7 @@ const {
 } = require("../utils/helper");
 const sendRiderPayoutApprovalEmail = require("../utils/email_riderPayoutApproval");
 const sendGroceryStorePayoutApprovalEmail = require("../utils/email_groceryStorePayoutApproval");
+const WalletCreditRecord = require("../models/WalletCreditRecord");
 
 const generateReferralCode = async () => {
   let referralCode;
@@ -1113,6 +1114,124 @@ module.exports = {
     } catch (error) {
       console.error("Error fetching restaurant owners:", error);
       res.status(500).json({ message: "Server error" });
+    }
+  },
+
+  addWalletCreditByEmail: async (req, res) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required." });
+      }
+
+      // Find user by email
+      const user = await User.findOne({ email });
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found." });
+      }
+
+      // Check if user already has a WalletCreditRecord
+      let creditRecord = await WalletCreditRecord.findOne({ user: user._id });
+
+      if (creditRecord && creditRecord.hasReceivedInitialCredit) {
+        return res
+          .status(400)
+          .json({ message: "User has already received the 2000 credit." });
+      }
+
+      // Create a new credit record or update existing
+      if (!creditRecord) {
+        creditRecord = new WalletCreditRecord({
+          user: user._id,
+          hasReceivedInitialCredit: true,
+        });
+      } else {
+        creditRecord.hasReceivedInitialCredit = true;
+      }
+
+      // Update user wallet
+      user.walletBalance += 2000;
+
+      await Promise.all([user.save(), creditRecord.save()]);
+
+      return res.status(200).json({
+        message: "2000 credit added to user wallet successfully.",
+        walletBalance: user.walletBalance,
+      });
+    } catch (error) {
+      console.error("Error adding credit:", error);
+      return res.status(500).json({ message: "Internal server error." });
+    }
+  },
+
+  getUsersWithCredit: async (req, res) => {
+    try {
+      const creditedRecords = await WalletCreditRecord.find({
+        hasReceivedInitialCredit: true,
+      }).populate("user", "firstName lastName email walletBalance");
+
+      return res.status(200).json(creditedRecords);
+    } catch (error) {
+      console.error("Error fetching credited users:", error);
+      return res.status(500).json({ message: "Internal server error." });
+    }
+  },
+
+  changeReferralCode: async (req, res) => {
+    try {
+      const { email, newReferralCode } = req.body;
+
+      if (!email || !newReferralCode) {
+        return res
+          .status(400)
+          .json({ message: "Email and new referral code are required." });
+      }
+
+      const formattedCode = newReferralCode.toUpperCase();
+
+      // Check if referral code is already in use by another user
+      const existingUser = await User.findOne({ referralCode: formattedCode });
+
+      if (existingUser) {
+        return res.status(400).json({
+          message: "Referral code is already in use by another user.",
+        });
+      }
+
+      // Find user by email
+      const user = await User.findOne({ email });
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found." });
+      }
+
+      // Update the referral code
+      user.referralCode = formattedCode;
+      await user.save();
+
+      return res.status(200).json({
+        message: "Referral code updated successfully.",
+        referralCode: user.referralCode,
+      });
+    } catch (error) {
+      console.error("Error changing referral code:", error);
+      return res.status(500).json({ message: "Internal server error." });
+    }
+  },
+
+  getAllUsers: async (req, res) => {
+    try {
+      const users = await User.find(
+        {},
+        "firstName lastName verified email phone userType _id"
+      );
+
+      return res.status(200).json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      return res.status(500).json({ message: "Internal server error." });
     }
   },
 };

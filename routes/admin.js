@@ -78,4 +78,24 @@ router.get(
   AdminController.getRestaurantWithOwnerDetails
 );
 
+router.post(
+  "/wallet/credit",
+  verifyStore,
+  AdminController.addWalletCreditByEmail
+);
+
+router.get(
+  "/wallet/credited-users",
+  verifyStore,
+  AdminController.getUsersWithCredit
+);
+
+router.post(
+  "/user/change-referral-code",
+  verifyStore,
+  AdminController.changeReferralCode
+);
+
+router.get("/users/all", verifyStore, AdminController.getAllUsers);
+
 module.exports = router;

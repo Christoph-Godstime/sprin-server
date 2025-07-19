@@ -1,67 +1,81 @@
 const mongoose = require("mongoose");
-const Food = require("./models/Food");
+const nodemailer = require("nodemailer");
 require("dotenv").config();
-const fs = require("fs");
-const path = require("path");
 
-// Grocery model (adjust path if needed)
-const Grocery = require("./models/Grocery");
+// Import User model
+const User = require("./models/User");
 
-const categories = [
-  {
-    title: "Beers And Ciders",
-    value: "beers-and-ciders",
-    imageUrl:
-      "https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/images%2FSaJkqumGAVvRcSvJHAadyNZNOB?alt=media&token=d89f4ad5-dea2-41ae-8f98-a67c12519ec5",
-  },
-  {
-    title: "Spirits",
-    value: "spirits",
-    imageUrl:
-      "https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/images%2FlrLpkeHEdabIUgLERAIZFzIFMd?alt=media&token=fcde16a7-9e65-43b6-a3b1-fbaa07535851",
-  },
-  {
-    title: "Wine",
-    value: "wine",
-    imageUrl:
-      "https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/images%2FBkTTDyasejXYSNnkTgmSjFQQyb?alt=media&token=841b3fed-e7e3-425e-ac06-20b17a3b9289",
-  },
-];
-
-const fixing = async () => {
+// Connect to MongoDB
+const sendFeedbackEmails = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URL, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
+    console.log("MongoDB connected...");
 
-    console.log("Connected to MongoDB");
+    // Fetch verified Clients
+    const users = await User.find({ userType: "Client", verified: true });
 
-    const newGrocery = new Grocery({
-      title: "B. Agofure Peanuts",
-      category: "679f0681ba0df5eed77fa93b", // replace with valid ObjectId
-      subCategory: "67dfb8b8568092ac4c162081", // replace with valid ObjectId
-      groceryStore: "679a64c44733392faf1956d9", // optional, or remove if not using
-      price: 3900,
-      quantity: "SM",
-      isAvailable: true,
-      imageUrl: [
-        "https://storage.googleapis.com/sprinfare2024.appspot.com/d2aa7754-8faf-4e75-8361-3437d70682a8.png",
-      ],
-      location: {
-        type: "Point",
-        coordinates: [6.114286556839943, 5.783790830243707],
+    if (users.length === 0) {
+      console.log("No verified Clients found.");
+      return;
+    }
+
+    // Configure mail transporter
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.AUTH_USER,
+        pass: process.env.AUTH_PASSWORD,
       },
     });
 
-    const savedGrocery = await newGrocery.save();
-    console.log("Grocery saved:", savedGrocery);
+    // WhatsApp message link
+    const whatsappLink = "https://wa.me/2348135289984"; // <-- Replace with your WhatsApp number
+
+    for (const user of users) {
+      const mailOptions = {
+        from: `"Sprin Support" <${process.env.AUTH_USER}>`,
+        to: user.email,
+        subject: "We'd love your feedback – Sprin Monthly Check-in",
+        html: `<html>
+  <body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 0; margin: 0;">
+    <table align="center" width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; padding: 20px; border-radius: 8px; margin-top: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+      <tr>
+        <td style="text-align: center;">
+          <img src="https://firebasestorage.googleapis.com/v0/b/sprinfare2024.appspot.com/o/sprin-images%2Fsprin.png?alt=media&token=09e6548d-6f53-4f93-a42a-faa117abe41f" alt="Sprin Logo" style="width: 100px;">
+          <h2 style="color: #333;">Hello ${user.firstName},</h2>
+          <p style="color: #555;">At the start of each month, we check in with our users to hear from you.</p>
+          <p style="color: #555;">Do you have any suggestions, feedback, or new features you'd love to see on Sprin?</p>
+          <p style="color: #555;">You can simply reply to this email or click the button below to message us on WhatsApp.</p>
+          <a href="${whatsappLink}" style="display: inline-block; padding: 10px 20px; background-color: #25D366; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px;">Send Feedback on WhatsApp</a>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding-top: 30px; text-align: center; font-size: 12px; color: #aaa;">
+          <p>&copy; ${new Date().getFullYear()} Sprin Technologies. All rights reserved.</p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`,
+      };
+
+      try {
+        await transporter.sendMail(mailOptions);
+        console.log(`Email sent to ${user.email}`);
+      } catch (err) {
+        console.log(`Failed to send email to ${user.email}`, err);
+      }
+    }
+
+    console.log("All emails processed.");
+    mongoose.connection.close();
   } catch (error) {
-    console.error("Error adding grocery:", error);
-  } finally {
-    await mongoose.disconnect();
-    console.log("Disconnected from MongoDB");
+    console.error("Error:", error);
+    mongoose.connection.close();
   }
 };
 
-fixing();
+sendFeedbackEmails();
