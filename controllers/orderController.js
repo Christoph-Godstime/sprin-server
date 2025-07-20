@@ -35,7 +35,7 @@ const processStorePayment = async (order) => {
     if (!store) {
       throw new Error("Restaurant not found");
     }
-    commissionRate = store.restaurantCommission || 0.1; // Default 10%
+    commissionRate = store.restaurantCommission ?? 0.1; // Default 10%
     paymentModel = Payment;
     paymentQuery = { restaurantId: storeId };
   } else if (storeType === "GroceryStore") {
@@ -43,7 +43,7 @@ const processStorePayment = async (order) => {
     if (!store) {
       throw new Error("Grocery Store not found");
     }
-    commissionRate = store.storeCommission || 0.0; // Default 0%
+    commissionRate = store.storeCommission ?? 0.0; // Default 0%
     paymentModel = GroceryPayment;
     paymentQuery = { groceryStoreId: storeId };
   } else {
