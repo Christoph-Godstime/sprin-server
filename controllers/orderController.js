@@ -763,6 +763,19 @@ module.exports = {
         });
       }
 
+      // Prevent ordering items with price 0 and no additives selected
+      for (const item of orderItems) {
+        if (
+          item.price === 0 &&
+          (!item.additives || item.additives.length === 0)
+        ) {
+          return res.status(400).json({
+            status: false,
+            message: `You must select at least one additive for '${item.title}' before placing your order.`,
+          });
+        }
+      }
+
       // Check availability of products (Food or Grocery)
       const productIds = orderItems.map((item) => item.productId);
       let products = [];

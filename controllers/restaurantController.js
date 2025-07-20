@@ -73,11 +73,62 @@ module.exports = {
     }
   },
 
+  // getNearbyRestaurants: async (req, res) => {
+  //   const latitude = parseFloat(req.query.lat);
+  //   const longitude = parseFloat(req.query.lng);
+  //   const radius = 10000; // 10 km radius
+  //   const limit = 100; // Number of restaurants to return
+
+  //   if (!latitude || !longitude) {
+  //     return res
+  //       .status(400)
+  //       .json({ message: "Latitude and longitude are required" });
+  //   }
+
+  //   try {
+  //     const restaurants = await Restaurant.aggregate([
+  //       {
+  //         $geoNear: {
+  //           near: { type: "Point", coordinates: [longitude, latitude] },
+  //           distanceField: "distance",
+  //           maxDistance: radius,
+  //           spherical: true,
+  //         },
+  //       },
+  //       {
+  //         $match: {
+  //           verification: "Verified", // Only return verified restaurants
+  //         },
+  //       },
+  //       {
+  //         $addFields: {
+  //           randomSort: { $rand: {} }, // Add a random value for sorting
+  //         },
+  //       },
+  //       {
+  //         $sort: {
+  //           isActive: -1, // Sort by isActive (true first)
+  //           randomSort: 1, // Randomize within each group
+  //         },
+  //       },
+  //       {
+  //         $limit: limit, // Limit the number of restaurants returned
+  //       },
+  //     ]);
+
+  //     return res.status(200).json(restaurants);
+  //   } catch (error) {
+  //     console.error("Failed to retrieve nearby restaurants:", error);
+  //     return res.status(500).json({ message: "Server error", error });
+  //   }
+  // },
+
   getNearbyRestaurants: async (req, res) => {
     const latitude = parseFloat(req.query.lat);
     const longitude = parseFloat(req.query.lng);
     const radius = 10000; // 10 km radius
-    const limit = 100; // Number of restaurants to return
+    const limit = 100;
+    const pinnedId = "6874da0680868bf39afb3f22";
 
     if (!latitude || !longitude) {
       return res
@@ -86,6 +137,7 @@ module.exports = {
     }
 
     try {
+      // Get all nearby verified restaurants
       const restaurants = await Restaurant.aggregate([
         {
           $geoNear: {
@@ -97,26 +149,52 @@ module.exports = {
         },
         {
           $match: {
-            verification: "Verified", // Only return verified restaurants
+            verification: "Verified",
           },
         },
         {
           $addFields: {
-            randomSort: { $rand: {} }, // Add a random value for sorting
+            randomSort: { $rand: {} },
           },
         },
         {
           $sort: {
-            isActive: -1, // Sort by isActive (true first)
-            randomSort: 1, // Randomize within each group
+            isActive: -1,
+            randomSort: 1,
           },
         },
         {
-          $limit: limit, // Limit the number of restaurants returned
+          $limit: limit,
         },
       ]);
 
-      return res.status(200).json(restaurants);
+      // Separate the pinned restaurant
+      const pinnedRestaurantIndex = restaurants.findIndex(
+        (r) => r._id.toString() === pinnedId
+      );
+
+      let pinnedRestaurant = null;
+      if (pinnedRestaurantIndex !== -1) {
+        pinnedRestaurant = restaurants.splice(pinnedRestaurantIndex, 1)[0];
+      }
+
+      // Split remaining into active and inactive
+      const activeRestaurants = restaurants.filter((r) => r.isActive);
+      const inactiveRestaurants = restaurants.filter((r) => !r.isActive);
+
+      // Insert pinned restaurant at the top of the correct list
+      if (pinnedRestaurant) {
+        if (pinnedRestaurant.isActive) {
+          activeRestaurants.unshift(pinnedRestaurant);
+        } else {
+          inactiveRestaurants.unshift(pinnedRestaurant);
+        }
+      }
+
+      // Combine both groups
+      const finalRestaurants = [...activeRestaurants, ...inactiveRestaurants];
+
+      return res.status(200).json(finalRestaurants);
     } catch (error) {
       console.error("Failed to retrieve nearby restaurants:", error);
       return res.status(500).json({ message: "Server error", error });
