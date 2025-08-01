@@ -160,8 +160,8 @@ module.exports = {
       const today = new Date();
       const isFreeDeliveryDay =
         today.getFullYear() === 2025 &&
-        today.getMonth() === 6 && // July is 6 (zero-indexed)
-        today.getDate() === 27;
+        today.getMonth() === 7 && // August is 7 (zero-indexed)
+        today.getDate() === 1;
 
       const orderCount = await Order.countDocuments({
         userId: new mongoose.Types.ObjectId(userId),
