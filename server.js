@@ -1,10 +1,14 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
+const mongoose = require("mongoose");
 const app = express();
 const dotenv = require("dotenv");
 
 dotenv.config();
+
+const PORT = Number(process.env.PORT) || 6000;
+const ALLOWED_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"];
 
 // Ensure raw body parsing for Paystack webhook
 app.use("/api/v1/paystack-webhook", express.raw({ type: "application/json" }));
@@ -29,7 +33,7 @@ app.use((req, res, next) => {
 
   res.setHeader(
     "Access-Control-Allow-Methods",
-    "GET,POST,PUT,DELETE,PATCH,OPTIONS"
+    ALLOWED_METHODS.join(",")
   );
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.setHeader("Access-Control-Allow-Credentials", "true");
@@ -38,6 +42,36 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+const getDatabaseStatus = () => {
+  const states = {
+    0: "disconnected",
+    1: "connected",
+    2: "connecting",
+    3: "disconnecting",
+  };
+
+  return {
+    state: states[mongoose.connection.readyState] || "unknown",
+    readyState: mongoose.connection.readyState,
+  };
+};
+
+const getHealthPayload = () => {
+  const database = getDatabaseStatus();
+  const firebaseConnected = fireBaseConnection && require("firebase-admin").apps.length > 0;
+
+  return {
+    status: database.readyState === 1 ? "ok" : "degraded",
+    message: "Sprin backend is running",
+    uptime: Number(process.uptime().toFixed(2)),
+    timestamp: new Date().toISOString(),
+    database,
+    firebase: {
+      connected: firebaseConnected,
+    },
+  };
+};
 
 const adminRoute = require("./routes/admin");
 const authRoute = require("./routes/auth");
@@ -72,7 +106,7 @@ const io = require("socket.io")(http, {
       "https://sprinapp.com",
       "https://restaurant.sprinapp.com",
     ], // Allowed origins
-    methods: ["GET,POST,PUT,DELETE,PATCH,OPTIONS"], // Allowed methods
+    methods: ALLOWED_METHODS, // Allowed methods
     credentials: true, // Allow credentials (cookies, authentication)
   },
 });
@@ -159,12 +193,26 @@ io.on("connection", (socket) => {
 app.set("io", io);
 app.set("userSocketMap", userSocketMap);
 
-fireBaseConnection();
+fireBaseConnection().catch((error) => {
+  console.error("Firebase initialization failed:", error.message);
+});
 
-dataBaseConnection();
+dataBaseConnection().catch((error) => {
+  console.error("MongoDB initialization failed:", error.message);
+});
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.get("/", (req, res) => {
+  res.status(200).json(getHealthPayload());
+});
+app.get("/health", (req, res) => {
+  res.status(200).json(getHealthPayload());
+});
+app.get("/api/health", (req, res) => {
+  const payload = getHealthPayload();
+  res.status(payload.status === "ok" ? 200 : 503).json(payload);
+});
 app.use("/api/admin", adminRoute);
 app.use("/", authRoute);
 app.use("/api/users", userRoute);
@@ -204,8 +252,22 @@ app.use(
   paystackRoute
 );
 
-http.listen(process.env.PORT || 6000, () =>
-  console.log(`Sprin backend app listening on port ${process.env.PORT}!`)
+app.use("/api", (req, res) => {
+  res.status(404).json({
+    status: false,
+    message: `API route not found: ${req.originalUrl}`,
+  });
+});
+
+app.use((req, res) => {
+  res.status(404).json({
+    status: false,
+    message: `Route not found: ${req.originalUrl}`,
+  });
+});
+
+http.listen(PORT, () =>
+  console.log(`Sprin backend app listening on port ${PORT}`)
 );
 
 // After server and socket.io are initialized, pass io and userSocketMap to the cron jobs

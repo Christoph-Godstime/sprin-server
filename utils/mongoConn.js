@@ -1,15 +1,34 @@
-const mongoose = require('mongoose');
-const dotenv = require('dotenv').config()
+const mongoose = require("mongoose");
+require("dotenv").config();
+
+let connectionPromise;
 
 const connectDB = async () => {
-    try {
-        await mongoose.connect(process.env.MONGO_URL);
-        console.log("Connected to the DB successfully");
-    } catch (err) {
-        
-        await mongoose.connect(process.env.MONGO_URL);
-        console.log("Reconnected to the DB successfully");
-    }
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection;
+  }
+
+  if (!process.env.MONGO_URL) {
+    throw new Error("MONGO_URL is not configured");
+  }
+
+  if (!connectionPromise) {
+    connectionPromise = mongoose
+      .connect(process.env.MONGO_URL, {
+        serverSelectionTimeoutMS: 10000,
+      })
+      .then((connection) => {
+        console.log("Connected to MongoDB successfully");
+        return connection;
+      })
+      .catch((error) => {
+        connectionPromise = undefined;
+        console.error("MongoDB connection failed:", error.message);
+        throw error;
+      });
+  }
+
+  return connectionPromise;
 };
 
 module.exports = connectDB;

@@ -1,15 +1,19 @@
-const admin = require('firebase-admin')
-const serviceAccount = require('../servicesAccountKey.json')
-
+const admin = require("firebase-admin");
+const serviceAccount = require("../servicesAccountKey.json");
 
 const fireBaseConnection = async () => {
-    admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-        databaseURL: "https://foodly-flutter-dc94b-default-rtdb.firebaseio.com"
-      });
-      console.log("Connected to Firebase");
-      
-}
+  if (admin.apps.length > 0) {
+    return admin.app();
+  }
+
+  const app = admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: "https://foodly-flutter-dc94b-default-rtdb.firebaseio.com",
+  });
+
+  console.log("Connected to Firebase");
+  return app;
+};
 
 async function sendPushNotification(deviceToken, messageBody) {
     const message = {
@@ -27,6 +31,5 @@ async function sendPushNotification(deviceToken, messageBody) {
         console.error('Error sending message:', error);
     }
 }
-
 
 module.exports = {fireBaseConnection, sendPushNotification};
