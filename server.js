@@ -13,18 +13,61 @@ const ALLOWED_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"];
 // Ensure raw body parsing for Paystack webhook
 app.use("/api/v1/paystack-webhook", express.raw({ type: "application/json" }));
 
-const allowedOrigins = [
+const DEFAULT_ALLOWED_ORIGINS = [
   "http://localhost:3000", // Development
+  "http://127.0.0.1:3000", // Development (alt)
   "https://www.sprinapp.com", // Production
   "https://sprinapp.com",
   "https://restaurant.sprinapp.com",
 ];
 
+const parseOrigins = (value) =>
+  String(value || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+const allowedOrigins = new Set([
+  ...DEFAULT_ALLOWED_ORIGINS,
+  ...parseOrigins(process.env.CORS_ORIGINS),
+]);
+
+const isAllowedOrigin = (origin) => {
+  if (!origin || origin === "null") return false;
+  if (allowedOrigins.has(origin)) return true;
+
+  try {
+    const url = new URL(origin);
+    const hostname = url.hostname.toLowerCase();
+
+    // Convenience: if both services run on Render, allow Render's default domains.
+    // This avoids having to hardcode every `*.onrender.com` URL in env vars.
+    if (
+      process.env.RENDER === "true" &&
+      url.protocol === "https:" &&
+      hostname.endsWith(".onrender.com")
+    ) {
+      return true;
+    }
+
+    // Local non-Cra ports (e.g., serving `build/` locally) during development.
+    if (
+      process.env.NODE_ENV !== "production" &&
+      (hostname === "localhost" || hostname === "127.0.0.1")
+    ) {
+      return true;
+    }
+  } catch {
+    // Ignore invalid Origin values
+  }
+
+  return false;
+};
+
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-  }
+  res.setHeader("Vary", "Origin");
+  if (isAllowedOrigin(origin)) res.setHeader("Access-Control-Allow-Origin", origin);
 
   // Bypass CORS for Paystack Webhooks
   if (req.path === "/api/v1/paystack-webhook") {
@@ -98,14 +141,17 @@ const { fireBaseConnection } = require("./utils/fbConnect");
 const dataBaseConnection = require("./utils/mongoConn");
 
 const http = require("http").createServer(app);
+const socketCorsOrigin = (origin, callback) => {
+  // Non-browser clients might not send an Origin header.
+  if (!origin) return callback(null, true);
+
+  if (isAllowedOrigin(origin)) return callback(null, true);
+  return callback(new Error("Not allowed by CORS"));
+};
+
 const io = require("socket.io")(http, {
   cors: {
-    origin: [
-      "http://localhost:3000", // Development
-      "https://www.sprinapp.com", // Production
-      "https://sprinapp.com",
-      "https://restaurant.sprinapp.com",
-    ], // Allowed origins
+    origin: socketCorsOrigin, // Allowed origins (kept in sync with HTTP CORS logic)
     methods: ALLOWED_METHODS, // Allowed methods
     credentials: true, // Allow credentials (cookies, authentication)
   },
